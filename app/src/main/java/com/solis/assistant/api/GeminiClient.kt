@@ -8,7 +8,6 @@ import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
-import java.io.IOException
 
 data class GeminiResult(
     val summary: String,
@@ -23,79 +22,70 @@ object GeminiClient {
         .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
         .build()
 
-    private val apiKey = BuildConfig.GEMINI_API_KEY
-    private const val BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+    private const val BASE_URL =
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
 
     suspend fun analyzeTranscript(transcript: String): GeminiResult = withContext(Dispatchers.IO) {
-        val prompt = """Sen Solis adlı kişisel asistansın. Kullanıcının sesli kayıt metnini analiz et:
-"$transcript"
-Şu formatta yanıt ver (JSON):
-{"ozet":"...","gorevler":["...","..."],"oneri":"..."}"""
-
-        val requestJson = """{"contents":[{"parts":[{"text":"${ prompt.replace(""","\"").replace("
-","\n") }"}]}]}"""
-
+        val safeTranscript = transcript.take(2000)
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+            .replace("\n", "\\n")
+        val requestBody = """
+            {"contents":[{"parts":[{"text":"Kullanıcı ses kaydı: $safeTranscript\nJSON formatında yanıt ver: {\"ozet\":\"...\",\"gorevler\":[\"...\"],\"oneri\":\"...\"}"}]}]}
+        """.trimIndent()
         try {
-            val body = requestJson.toRequestBody("application/json".toMediaType())
+            val body = requestBody.toRequestBody("application/json".toMediaType())
             val request = Request.Builder()
-                .url("$BASE_URL?key=$apiKey")
+                .url("$BASE_URL?key=${BuildConfig.GEMINI_API_KEY}")
                 .post(body)
                 .build()
-
             client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    return@withContext GeminiResult("API hatası: ${response.code}", emptyList(), "")
-                }
-                val responseStr = response.body?.string() ?: ""
-                val json = JSONObject(responseStr)
-                val text = json
-                    .getJSONArray("candidates")
-                    .getJSONObject(0)
-                    .getJSONObject("content")
-                    .getJSONArray("parts")
-                    .getJSONObject(0)
-                    .getString("text")
-
-                return@withContext try {
-                    val clean = text.trim().removePrefix("```json").removeSuffix("```").trim()
-                    val result = JSONObject(clean)
-                    val gorevlerArr = result.optJSONArray("gorevler")
-                    val gorevler = mutableListOf<String>()
-                    if (gorevlerArr != null) {
-                        for (i in 0 until gorevlerArr.length()) gorevler.add(gorevlerArr.getString(i))
-                    }
-                    GeminiResult(
-                        summary = result.optString("ozet", text),
-                        tasks = gorevler,
-                        suggestion = result.optString("oneri", "")
-                    )
-                } catch (e: Exception) {
-                    GeminiResult(text, emptyList(), "")
-                }
+                if (!response.isSuccessful) return@withContext GeminiResult("Hata: ${response.code}", emptyList(), "")
+                val text = extractText(response.body?.string() ?: "")
+                parseResult(text)
             }
-        } catch (e: IOException) {
-            Log.e("GeminiClient", "Hata: ${e.message}")
-            GeminiResult("Bağlantı hatası: ${e.message}", emptyList(), "")
+        } catch (e: Exception) {
+            Log.e("Gemini", e.message ?: "error")
+            GeminiResult("Bağlantı hatası", emptyList(), "")
         }
     }
 
     suspend fun generateDailySummary(records: List<String>): String = withContext(Dispatchers.IO) {
-        val combined = records.joinToString("\n---\n")
-        val prompt = "Bugünün ses kayıtlarını özetle (Türkçe, 3-5 cümle):\n$combined"
-        val requestJson = """{"contents":[{"parts":[{"text":"${prompt.replace(""","\"").replace("
-","\n")}"}]}]}"""
+        val combined = records.joinToString(" / ").take(3000)
+            .replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")
+        val requestBody = """{"contents":[{"parts":[{"text":"Bugünün kayıtlarını 3 cümleyle özetle: $combined"}]}]}"""
         try {
-            val body = requestJson.toRequestBody("application/json".toMediaType())
-            val request = Request.Builder().url("$BASE_URL?key=$apiKey").post(body).build()
+            val body = requestBody.toRequestBody("application/json".toMediaType())
+            val request = Request.Builder().url("$BASE_URL?key=${BuildConfig.GEMINI_API_KEY}").post(body).build()
             client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext "API hatası"
-                val json = JSONObject(response.body?.string() ?: "")
-                json.getJSONArray("candidates").getJSONObject(0)
-                    .getJSONObject("content").getJSONArray("parts")
-                    .getJSONObject(0).getString("text")
+                if (!response.isSuccessful) return@withContext "Hata"
+                extractText(response.body?.string() ?: "")
             }
         } catch (e: Exception) {
-            "Özet oluşturulamadı: ${e.message}"
+            "Özet alınamadı"
+        }
+    }
+
+    private fun extractText(responseStr: String): String {
+        return try {
+            JSONObject(responseStr)
+                .getJSONArray("candidates").getJSONObject(0)
+                .getJSONObject("content").getJSONArray("parts")
+                .getJSONObject(0).getString("text")
+        } catch (e: Exception) { "" }
+    }
+
+    private fun parseResult(text: String): GeminiResult {
+        return try {
+            val clean = text.trim().removePrefix("```json").removeSuffix("```").trim()
+            val j = JSONObject(clean)
+            val tasks = mutableListOf<String>()
+            j.optJSONArray("gorevler")?.let { arr ->
+                for (i in 0 until arr.length()) tasks.add(arr.getString(i))
+            }
+            GeminiResult(j.optString("ozet", text), tasks, j.optString("oneri", ""))
+        } catch (e: Exception) {
+            GeminiResult(text, emptyList(), "")
         }
     }
 }
