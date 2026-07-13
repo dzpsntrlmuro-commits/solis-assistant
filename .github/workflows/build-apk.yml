@@ -11,20 +11,31 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
+
       - uses: android-actions/setup-android@v3
-      - run: chmod +x gradlew
-      - name: Build
+
+      - name: Fix gradlew permissions
         run: |
-          set -o pipefail
-          ./gradlew assembleDebug --no-daemon 2>&1 | tail -200
+          chmod +x gradlew
+          head -5 gradlew
+
+      - name: Build APK
+        run: |
+          java -jar gradle/wrapper/gradle-wrapper.jar assembleDebug --no-daemon --stacktrace 2>&1 | tail -100
+
+      - name: Find APK
+        if: always()
+        run: find . -name "*.apk" 2>/dev/null || echo "No APK found"
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: apk-output
-          path: |
-            app/build/outputs/apk/
+          name: solis-apk
+          path: app/build/outputs/apk/debug/
           if-no-files-found: warn
+          retention-days: 30
