@@ -19,23 +19,27 @@ jobs:
 
       - uses: android-actions/setup-android@v3
 
-      - name: Fix gradlew permissions
-        run: |
-          chmod +x gradlew
-          head -5 gradlew
+      - name: Install Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.4'
 
       - name: Build APK
-        run: |
-          java -jar gradle/wrapper/gradle-wrapper.jar assembleDebug --no-daemon --stacktrace 2>&1 | tail -100
+        run: gradle assembleDebug --no-daemon --stacktrace
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
 
       - name: Find APK
         if: always()
-        run: find . -name "*.apk" 2>/dev/null || echo "No APK found"
+        run: |
+          echo "=== APK Search ==="
+          find . -name "*.apk" 2>/dev/null || echo "No APK"
+          echo "=== Build dir ==="
+          ls app/build/outputs/ 2>/dev/null || echo "No outputs"
 
       - uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: solis-apk
-          path: app/build/outputs/apk/debug/
-          if-no-files-found: warn
+          name: solis-assistant-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
           retention-days: 30
