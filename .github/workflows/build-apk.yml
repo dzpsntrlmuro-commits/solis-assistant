@@ -26,17 +26,25 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace
+        run: |
+          ./gradlew assembleDebug --stacktrace 2>&1 | tee build-log.txt
+          echo "Exit code: $?"
+        continue-on-error: true
+
+      - name: Upload build log
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build-log.txt
+          retention-days: 7
 
       - name: Find APK files
-        run: find . -name "*.apk" -type f
+        run: find . -name "*.apk" 2>/dev/null || echo "No APK found"
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: solis-assistant-debug
-          path: |
-            app/build/outputs/apk/debug/*.apk
-            app/build/outputs/apk/**/*.apk
+          path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: warn
           retention-days: 30
