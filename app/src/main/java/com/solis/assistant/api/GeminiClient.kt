@@ -1,14 +1,20 @@
 package com.solis.assistant.api
 
-import com.google.gson.Gson
-import com.google.gson.annotations.SerializedName
+import android.util.Log
 import com.solis.assistant.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 import java.io.IOException
+
+data class GeminiResult(
+    val summary: String,
+    val tasks: List<String>,
+    val suggestion: String
+)
 
 object GeminiClient {
 
@@ -17,117 +23,79 @@ object GeminiClient {
         .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
         .build()
 
-    private val gson = Gson()
     private val apiKey = BuildConfig.GEMINI_API_KEY
     private const val BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
 
-    // Ses metnini analiz et ve öneriler üret
     suspend fun analyzeTranscript(transcript: String): GeminiResult = withContext(Dispatchers.IO) {
-        val prompt = """
-            Sen Solis adında bir kişisel asistansın. Türkçe konuşan bir kullanıcının günlük sesli kayıtlarını analiz ediyorsun.
-            
-            Aşağıdaki ses kaydı metni kullanıcının gün içindeki konuşmalarından alındı:
-            
-            "$transcript"
-            
-            Lütfen şunları yap:
-            1. Bu konuşmada geçen önemli konuları, kişileri, görevleri özetle (2-3 cümle)
-            2. Kullanıcının yapması gereken işler veya takip etmesi gereken konular varsa listele
-            3. Faydalı bir öneri veya fikir sun
-            
-            JSON formatında yanıt ver:
-            {
-              "ozet": "...",
-              "yapilacaklar": ["...", "..."],
-              "oneri": "..."
-            }
-        """.trimIndent()
+        val prompt = """Sen Solis adlı kişisel asistansın. Kullanıcının sesli kayıt metnini analiz et:
+"$transcript"
+Şu formatta yanıt ver (JSON):
+{"ozet":"...","gorevler":["...","..."],"oneri":"..."}"""
 
-        makeRequest(prompt)
-    }
+        val requestJson = """{"contents":[{"parts":[{"text":"${ prompt.replace(""","\"").replace("
+","\n") }"}]}]}"""
 
-    // Gün sonu özeti oluştur
-    suspend fun createDailySummary(allTranscripts: String): GeminiResult = withContext(Dispatchers.IO) {
-        val prompt = """
-            Sen Solis adında bir kişisel asistansın. Kullanıcının bugünkü tüm ses kayıtlarını analiz ediyorsun.
-            
-            Bugünkü tüm konuşmalar:
-            $allTranscripts
-            
-            Gün sonu kapsamlı özet oluştur:
-            1. Bugün kimlerle konuşuldu?
-            2. Hangi konular ele alındı?
-            3. Tamamlanan veya tamamlanması gereken işler neler?
-            4. Yarın için öneriler
-            
-            JSON formatında yanıt ver:
-            {
-              "ozet": "...",
-              "konusulanlar": ["...", "..."],
-              "konular": ["...", "..."],
-              "yapilacaklar": ["...", "..."],
-              "yarin_onerileri": ["...", "..."]
-            }
-        """.trimIndent()
-
-        makeRequest(prompt)
-    }
-
-    private fun makeRequest(prompt: String): GeminiResult {
-        return try {
-            val requestBody = gson.toJson(
-                mapOf(
-                    "contents" to listOf(
-                        mapOf("parts" to listOf(mapOf("text" to prompt)))
-                    ),
-                    "generationConfig" to mapOf(
-                        "temperature" to 0.7,
-                        "maxOutputTokens" to 1024
-                    )
-                )
-            )
-
+        try {
+            val body = requestJson.toRequestBody("application/json".toMediaType())
             val request = Request.Builder()
                 .url("$BASE_URL?key=$apiKey")
-                .post(requestBody.toRequestBody("application/json".toMediaType()))
+                .post(body)
                 .build()
 
-            val response = client.newCall(request).execute()
-            val body = response.body?.string() ?: ""
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@withContext GeminiResult("API hatası: ${response.code}", emptyList(), "")
+                }
+                val responseStr = response.body?.string() ?: ""
+                val json = JSONObject(responseStr)
+                val text = json
+                    .getJSONArray("candidates")
+                    .getJSONObject(0)
+                    .getJSONObject("content")
+                    .getJSONArray("parts")
+                    .getJSONObject(0)
+                    .getString("text")
 
-            if (response.isSuccessful) {
-                val parsed = gson.fromJson(body, GeminiResponse::class.java)
-                val text = parsed.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: ""
-                GeminiResult.Success(text)
-            } else {
-                GeminiResult.Error("API Hatası: ${response.code}")
+                return@withContext try {
+                    val clean = text.trim().removePrefix("```json").removeSuffix("```").trim()
+                    val result = JSONObject(clean)
+                    val gorevlerArr = result.optJSONArray("gorevler")
+                    val gorevler = mutableListOf<String>()
+                    if (gorevlerArr != null) {
+                        for (i in 0 until gorevlerArr.length()) gorevler.add(gorevlerArr.getString(i))
+                    }
+                    GeminiResult(
+                        summary = result.optString("ozet", text),
+                        tasks = gorevler,
+                        suggestion = result.optString("oneri", "")
+                    )
+                } catch (e: Exception) {
+                    GeminiResult(text, emptyList(), "")
+                }
             }
         } catch (e: IOException) {
-            GeminiResult.Error("Bağlantı hatası: ${e.message}")
+            Log.e("GeminiClient", "Hata: ${e.message}")
+            GeminiResult("Bağlantı hatası: ${e.message}", emptyList(), "")
+        }
+    }
+
+    suspend fun generateDailySummary(records: List<String>): String = withContext(Dispatchers.IO) {
+        val combined = records.joinToString("\n---\n")
+        val prompt = "Bugünün ses kayıtlarını özetle (Türkçe, 3-5 cümle):\n$combined"
+        val requestJson = """{"contents":[{"parts":[{"text":"${prompt.replace(""","\"").replace("
+","\n")}"}]}]}"""
+        try {
+            val body = requestJson.toRequestBody("application/json".toMediaType())
+            val request = Request.Builder().url("$BASE_URL?key=$apiKey").post(body).build()
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext "API hatası"
+                val json = JSONObject(response.body?.string() ?: "")
+                json.getJSONArray("candidates").getJSONObject(0)
+                    .getJSONObject("content").getJSONArray("parts")
+                    .getJSONObject(0).getString("text")
+            }
         } catch (e: Exception) {
-            GeminiResult.Error("Hata: ${e.message}")
+            "Özet oluşturulamadı: ${e.message}"
         }
     }
 }
-
-sealed class GeminiResult {
-    data class Success(val text: String) : GeminiResult()
-    data class Error(val message: String) : GeminiResult()
-}
-
-// Response modelleri
-data class GeminiResponse(
-    val candidates: List<Candidate>?
-)
-
-data class Candidate(
-    val content: Content?
-)
-
-data class Content(
-    val parts: List<Part>?
-)
-
-data class Part(
-    val text: String?
-)
