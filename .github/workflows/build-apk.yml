@@ -19,27 +19,22 @@ jobs:
 
       - uses: android-actions/setup-android@v3
 
-      - name: Install Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.4'
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Test gradlew
+        run: ./gradlew --version
 
       - name: Build APK
-        run: gradle assembleDebug --no-daemon --stacktrace
-        env:
-          ANDROID_HOME: ${{ env.ANDROID_HOME }}
+        run: ./gradlew assembleDebug --no-daemon
 
       - name: Find APK
         if: always()
-        run: |
-          echo "=== APK Search ==="
-          find . -name "*.apk" 2>/dev/null || echo "No APK"
-          echo "=== Build dir ==="
-          ls app/build/outputs/ 2>/dev/null || echo "No outputs"
+        run: find . -name "*.apk" 2>/dev/null && echo "APK found!" || echo "No APK"
 
       - uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: solis-assistant-apk
           path: app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
           retention-days: 30
