@@ -25,13 +25,23 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Debug APK (with full output)
-        run: ./gradlew assembleDebug --stacktrace --info 2>&1 | tail -n 150
-        continue-on-error: true
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
 
-      - name: Check build output dir
+      - name: Find and copy APK
         run: |
-          echo "=== Build dir contents ==="
-          find app/build -type f 2>/dev/null | head -50 || echo "No build dir"
-          echo "=== APK search ==="
-          find . -name "*.apk" 2>/dev/null || echo "No APK"
+          echo "=== Tüm APK dosyaları ==="
+          find . -name "*.apk" -type f 2>/dev/null
+          echo "=== Build klasörü ==="
+          find app/build -type f -name "*.apk" 2>/dev/null || echo "app/build bulunamadı"
+          mkdir -p output
+          find . -name "*.apk" -exec cp {} output/ \;
+          ls -la output/
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: solis-assistant-apk
+          path: output/
+          if-no-files-found: error
+          retention-days: 30
