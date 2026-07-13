@@ -11,30 +11,44 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-
       - uses: android-actions/setup-android@v3
+      - run: chmod +x gradlew
 
-      - name: Make gradlew executable
-        run: chmod +x gradlew
-
-      - name: Test gradlew
-        run: ./gradlew --version
-
-      - name: Build APK
-        run: ./gradlew assembleDebug --no-daemon
-
-      - name: Find APK
-        if: always()
-        run: find . -name "*.apk" 2>/dev/null && echo "APK found!" || echo "No APK"
+      - name: Build APK (capture errors)
+        run: |
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 > build-output.txt || true
+          # Sadece hata satırlarını göster
+          echo "=== ERRORS ==="
+          grep -E "(error:|Error:|FAILED|Exception|Cannot|Could not|Unresolved)" build-output.txt | head -50 || echo "No error lines found"
+          echo "=== LAST 80 LINES ==="
+          tail -80 build-output.txt
 
       - uses: actions/upload-artifact@v4
-        if: success()
+        if: always()
         with:
-          name: solis-assistant-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: build-output
+          path: build-output.txt
+          retention-days: 3
+
+      - name: Upload APK if exists
+        if: always()
+        run: |
+          APK=$(find . -name "*.apk" 2>/dev/null | head -1)
+          if [ -n "$APK" ]; then
+            echo "APK found: $APK"
+            cp "$APK" ./app-debug.apk
+          else
+            echo "No APK produced"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: solis-apk
+          path: app-debug.apk
+          if-no-files-found: warn
           retention-days: 30
