@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- İzinler -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
@@ -10,7 +9,6 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:allowBackup="true"
@@ -20,46 +18,33 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.SolisAssistant">
 
-        <!-- Ana Aktivite -->
         <activity
             android:name=".ui.MainActivity"
-            android:exported="true"
-            android:launchMode="singleTop">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <!-- Gün Sonu Özet Aktivitesi -->
-        <activity
-            android:name=".ui.DailySummaryActivity"
-            android:exported="false" />
+        <activity android:name=".ui.DailySummaryActivity" android:exported="false"/>
 
-        <!-- Sürekli Dinleme Servisi -->
         <service
             android:name=".service.ListenerService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="microphone" />
+            android:foregroundServiceType="microphone"/>
 
-        <!-- Gün Sonu Özet Servisi -->
-        <service
-            android:name=".service.SummaryService"
-            android:enabled="true"
-            android:exported="false" />
+        <service android:name=".service.SummaryService" android:exported="false"/>
 
-        <!-- Boot Receiver - Telefon açılınca otomatik başlat -->
         <receiver
             android:name=".service.BootReceiver"
             android:enabled="true"
             android:exported="true">
-            <intent-filter android:priority="999">
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
             </intent-filter>
         </receiver>
 
     </application>
-
 </manifest>
