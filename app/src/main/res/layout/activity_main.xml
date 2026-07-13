@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="#F5F5F5">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:background="#1A237E"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="🤖 Solis Asistan"
+            android:textColor="#FFFFFF"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🔴 Pasif"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <!-- Kontrol Butonları -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="16dp">
+
+        <Button
+            android:id="@+id/btnToggle"
+            android:layout_width="0dp"
+            android:layout_height="56dp"
+            android:layout_weight="1"
+            android:text="▶️ Başlat"
+            android:textColor="#FFFFFF"
+            android:layout_marginEnd="8dp"
+            android:backgroundTint="#4CAF50" />
+
+        <Button
+            android:id="@+id/btnSummary"
+            android:layout_width="0dp"
+            android:layout_height="56dp"
+            android:layout_weight="1"
+            android:text="📊 Gün Özeti"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#1565C0" />
+    </LinearLayout>
+
+    <!-- Pil Optimizasyonu Uyarısı -->
+    <Button
+        android:id="@+id/btnBatteryOptimize"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="⚡ Pil Optimizasyonunu Devre Dışı Bırak"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#FF6F00"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Kayıt Sayısı -->
+    <TextView
+        android:id="@+id/tvRecordCount"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Bugün 0 kayıt"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:padding="8dp"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Boş durum mesajı -->
+    <TextView
+        android:id="@+id/tvNoRecords"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Henüz kayıt yok.\nSolis'i başlatınca seslerinizi analiz edecek."
+        android:textSize="14sp"
+        android:textColor="#888888"
+        android:gravity="center"
+        android:padding="32dp"
+        android:visibility="visible" />
+
+    <!-- Kayıtlar Listesi -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:visibility="gone" />
+
+</LinearLayout>
