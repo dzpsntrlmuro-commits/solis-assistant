@@ -20,4 +20,5 @@
     <string name="back">Geri</string>
     <string name="open_web_player">Web oynatıcı</string>
     <string name="web_fallback_meta">Gömülü oynatıcı · reklam istekleri engellenir</string>
+    <string name="fast_adblock_meta">Hızlı oynatma · reklamlar engelleniyor</string>
 </resources>

@@ -2,94 +2,84 @@ package com.temiztube.app.data
 
 import com.temiztube.app.model.PlayableStream
 import com.temiztube.app.model.StreamKind
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
+import kotlin.math.abs
 
 /**
- * Piped frontends that proxy YouTube streams. Tried in order until one succeeds.
+ * Fast Piped resolver: races instances in parallel. First success wins (~3–5s max).
  */
 object PipedClient {
 
     private val instances = listOf(
-        "https://pipedapi.reallyaweso.me",
-        "https://api.piped.private.coffee",
         "https://pipedapi.kavin.rocks",
+        "https://api.piped.private.coffee",
         "https://pipedapi.adminforge.de",
-        "https://pipedapi.syncpundit.io",
-        "https://pipedapi.colinslegacy.com",
+        "https://pipedapi.reallyaweso.me",
         "https://pipedapi.ducks.party",
-        "https://pipedapi.darkness.services"
+        "https://pipedapi.colinslegacy.com"
     )
 
     private val client = OkHttpClient.Builder()
-        .connectTimeout(12, TimeUnit.SECONDS)
-        .readTimeout(20, TimeUnit.SECONDS)
+        .connectTimeout(3, TimeUnit.SECONDS)
+        .readTimeout(4, TimeUnit.SECONDS)
+        .callTimeout(5, TimeUnit.SECONDS)
         .followRedirects(true)
         .followSslRedirects(true)
+        .retryOnConnectionFailure(false)
         .build()
 
-    fun resolveStream(videoId: String): PlayableStream {
-        var lastError: Exception? = null
-        for (base in instances) {
+    suspend fun resolveStreamFast(videoId: String): PlayableStream = withContext(Dispatchers.IO) {
+        coroutineScope {
+            val results = Channel<PlayableStream>(Channel.CONFLATED)
+            val jobs = instances.map { base ->
+                launch {
+                    runCatching { fetchFrom(base.trimEnd('/'), videoId) }
+                        .onSuccess { results.trySend(it) }
+                }
+            }
             try {
-                return fetchFrom(base.trimEnd('/'), videoId)
-            } catch (e: Exception) {
-                lastError = e
+                withTimeout(5_000) { results.receive() }
+            } finally {
+                jobs.forEach { it.cancel() }
+                results.close()
             }
         }
-        throw lastError ?: IllegalStateException("Piped üzerinden video alınamadı")
     }
 
     private fun fetchFrom(base: String, videoId: String): PlayableStream {
         val request = Request.Builder()
             .url("$base/streams/$videoId")
-            .header("User-Agent", "Mozilla/5.0 (Linux; Android 13) TemizTube/1.1")
+            .header("User-Agent", "TemizTube/1.2")
             .header("Accept", "application/json")
             .get()
             .build()
 
         client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                throw IllegalStateException("HTTP ${response.code}")
-            }
+            if (!response.isSuccessful) throw IllegalStateException("HTTP ${response.code}")
             val body = response.body?.string().orEmpty().trim()
-            if (!body.startsWith("{")) {
-                throw IllegalStateException("JSON değil")
-            }
+            if (!body.startsWith("{")) throw IllegalStateException("JSON değil")
             return parseStreams(JSONObject(body))
         }
     }
 
     private fun parseStreams(json: JSONObject): PlayableStream {
         if (json.has("error") && json.optString("error").isNotBlank()) {
-            throw IllegalStateException(json.optString("error").take(120))
+            throw IllegalStateException(json.optString("error").take(80))
         }
 
         val title = json.optString("title")
         val uploader = json.optString("uploader")
-        val videoStreams = json.optJSONArray("videoStreams")
 
-        if (videoStreams != null) {
-            val muxedMp4 = ArrayList<JSONObject>()
-            for (i in 0 until videoStreams.length()) {
-                val s = videoStreams.getJSONObject(i)
-                if (s.optBoolean("videoOnly", true)) continue
-                if (s.optString("url").isBlank()) continue
-                if (isMp4Video(s)) muxedMp4.add(s)
-            }
-            muxedMp4.maxByOrNull { qualityRank(it.optString("quality")) }?.let { best ->
-                return PlayableStream(
-                    videoUrl = best.getString("url"),
-                    kind = StreamKind.PROGRESSIVE,
-                    title = title,
-                    uploader = uploader,
-                    qualityLabel = best.optString("quality").ifBlank { "mp4" }
-                )
-            }
-        }
-
+        // HLS starts fast (adaptive low→high)
         json.optString("hls").takeIf { it.isNotBlank() }?.let { hls ->
             return PlayableStream(
                 videoUrl = hls,
@@ -100,18 +90,54 @@ object PipedClient {
             )
         }
 
+        val videoStreams = json.optJSONArray("videoStreams")
+
+        // Muxed MP4 ~480p for quick start
         if (videoStreams != null) {
-            val videoOnlyMp4 = ArrayList<JSONObject>()
+            val muxed = ArrayList<JSONObject>()
+            for (i in 0 until videoStreams.length()) {
+                val s = videoStreams.getJSONObject(i)
+                if (s.optBoolean("videoOnly", true)) continue
+                if (s.optString("url").isBlank()) continue
+                if (!isMp4Video(s)) continue
+                val q = qualityRank(s.optString("quality"))
+                if (q in 144..720) muxed.add(s)
+            }
+            muxed.minByOrNull { abs(qualityRank(it.optString("quality")) - 480) }?.let { best ->
+                return PlayableStream(
+                    videoUrl = best.getString("url"),
+                    kind = StreamKind.PROGRESSIVE,
+                    title = title,
+                    uploader = uploader,
+                    qualityLabel = best.optString("quality").ifBlank { "mp4" }
+                )
+            }
+
+            for (i in 0 until videoStreams.length()) {
+                val s = videoStreams.getJSONObject(i)
+                if (s.optBoolean("videoOnly", true)) continue
+                if (s.optString("url").isBlank()) continue
+                if (!isMp4Video(s)) continue
+                return PlayableStream(
+                    videoUrl = s.getString("url"),
+                    kind = StreamKind.PROGRESSIVE,
+                    title = title,
+                    uploader = uploader,
+                    qualityLabel = s.optString("quality").ifBlank { "mp4" }
+                )
+            }
+
+            val audioUrl = pickAudioUrl(json)
+            val candidates = ArrayList<JSONObject>()
             for (i in 0 until videoStreams.length()) {
                 val s = videoStreams.getJSONObject(i)
                 if (!s.optBoolean("videoOnly", false)) continue
                 if (s.optString("url").isBlank()) continue
                 if (!isMp4Video(s)) continue
                 val q = qualityRank(s.optString("quality"))
-                if (q in 1..1080) videoOnlyMp4.add(s)
+                if (q in 144..720) candidates.add(s)
             }
-            val audioUrl = pickAudioUrl(json)
-            videoOnlyMp4.maxByOrNull { qualityRank(it.optString("quality")) }?.let { best ->
+            candidates.minByOrNull { abs(qualityRank(it.optString("quality")) - 480) }?.let { best ->
                 return PlayableStream(
                     videoUrl = best.getString("url"),
                     audioUrl = audioUrl,
@@ -133,7 +159,7 @@ object PipedClient {
             )
         }
 
-        throw IllegalStateException("Oynatılabilir akış yok")
+        throw IllegalStateException("Akış yok")
     }
 
     private fun pickAudioUrl(json: JSONObject): String? {
@@ -149,8 +175,7 @@ object PipedClient {
             val mp4ish = mime.contains("mp4") || mime.contains("m4a") ||
                 format.contains("M4A") || format.contains("MPEG")
             if (!mp4ish) continue
-            val score = a.optInt("bitrate", 0).takeIf { it > 0 }
-                ?: a.optInt("quality", 0)
+            val score = a.optInt("bitrate", 0).takeIf { it > 0 } ?: a.optInt("quality", 0)
             if (score >= bestScore) {
                 bestScore = score
                 bestUrl = url
@@ -167,8 +192,6 @@ object PipedClient {
             url.contains("mime=video%2fmp4") || url.contains("mime=video/mp4")
     }
 
-    private fun qualityRank(quality: String): Int {
-        val digits = quality.filter { it.isDigit() }
-        return digits.toIntOrNull() ?: 0
-    }
+    private fun qualityRank(quality: String): Int =
+        quality.filter { it.isDigit() }.toIntOrNull() ?: 0
 }

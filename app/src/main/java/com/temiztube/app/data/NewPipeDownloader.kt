@@ -9,8 +9,7 @@ import org.schabi.newpipe.extractor.exceptions.ReCaptchaException
 import java.util.concurrent.TimeUnit
 
 /**
- * OkHttp-backed downloader for NewPipe Extractor.
- * Blocks known YouTube ad / tracking hosts so accompanying requests never load ads.
+ * OkHttp-backed downloader for NewPipe Extractor (search only).
  */
 class NewPipeDownloader private constructor(
     private val client: OkHttpClient
@@ -45,7 +44,6 @@ class NewPipeDownloader private constructor(
             builder.header("Accept-Language", "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7")
         }
         if (request.headers()["Cookie"].isNullOrEmpty()) {
-            // Soften anonymous YouTube bot challenges on some networks
             builder.header("Cookie", "CONSENT=YES+; SOCS=CAI")
         }
 
@@ -80,8 +78,8 @@ class NewPipeDownloader private constructor(
             return instance ?: synchronized(this) {
                 instance ?: NewPipeDownloader(
                     OkHttpClient.Builder()
-                        .readTimeout(30, TimeUnit.SECONDS)
-                        .connectTimeout(30, TimeUnit.SECONDS)
+                        .readTimeout(20, TimeUnit.SECONDS)
+                        .connectTimeout(15, TimeUnit.SECONDS)
                         .build()
                 ).also { instance = it }
             }
@@ -100,18 +98,41 @@ object AdBlockFilter {
         "adservice.google.com.tr",
         "tpc.googlesyndication.com",
         "partner.googleadservices.com",
-        "ade.googlesyndication.com"
+        "ade.googlesyndication.com",
+        "pagead.l.doubleclick.net",
+        "googleadservices.com",
+        "googlesyndication.com",
+        "doubleclick.net",
+        "ads.youtube.com",
+        "advertise.bingads.microsoft.com",
+        "ad.youtube.com",
+        "s0.2mdn.net",
+        "securepubads.g.doubleclick.net",
+        "www.googletagservices.com",
+        "www.googletagmanager.com",
+        "fundingchoicesmessages.google.com"
     )
 
     private val blockedPathMarkers = listOf(
-        "youtube.com/pagead",
-        "youtube.com/ptracking",
-        "youtube.com/api/stats/ads",
-        "s.ytimg.com/yts/jsbin/www-pagead"
+        "/pagead",
+        "/ptracking",
+        "/api/stats/ads",
+        "/pc/ads",
+        "/get_midroll",
+        "/youtubei/v1/player/ad",
+        "www-pagead",
+        "doubleclick.net",
+        "googlesyndication.com",
+        "googleadservices.com"
     )
 
     fun shouldBlock(url: String): Boolean {
         val lower = url.lowercase()
+        // Never block the actual video media CDN or player assets needed for playback
+        if (lower.contains("googlevideo.com") && !lower.contains("ad")) return false
+        if (lower.contains("ytimg.com") && !lower.contains("pagead")) return false
+        if (lower.contains("jnn-pa.googleapis.com")) return false
+
         if (blockedPathMarkers.any { lower.contains(it) }) return true
         val hostPart = lower
             .removePrefix("https://")
