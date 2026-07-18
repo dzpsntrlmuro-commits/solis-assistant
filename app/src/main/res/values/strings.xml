@@ -1,21 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Yüz Falı</string>
-    <string name="tagline">Yüzün ve duruşundan geleceğini keşfet</string>
-    <string name="btn_start">Fal Bak</string>
-    <string name="btn_stop">Durdur</string>
-    <string name="btn_speak">Sesli Oku</string>
+    <string name="app_name">İçki Say</string>
+    <string name="tagline">Kamerayı içkilere tut, yapay zeka saysın ve sesli söylesin</string>
+    <string name="btn_count">İçkileri Say</string>
+    <string name="btn_counting">Sayılıyor…</string>
+    <string name="btn_speak">Tekrar Söyle</string>
     <string name="btn_stop_speak">Sustur</string>
-    <string name="btn_retry">Yeniden Dene</string>
-    <string name="status_ready">Kameraya bakın ve fal bak butonuna basın</string>
-    <string name="status_scanning">Yüzünüz ve duruşunuz analiz ediliyor…</string>
-    <string name="status_done">Fal raporunuz hazır</string>
-    <string name="status_no_face">Yüz algılanamadı. Lütfen kameraya bakın.</string>
-    <string name="status_no_pose">Duruş algılanamadı. Omuzlarınızı gösterin.</string>
+    <string name="status_ready">Arka kamerayı içkilere tutun ve butona basın</string>
+    <string name="status_counting">Yapay zeka içkileri sayıyor…</string>
     <string name="status_permission">Kamera izni gerekli</string>
-    <string name="section_future">Gelecek</string>
-    <string name="section_emotion">Duygusal Durum</string>
-    <string name="section_posture">Duruş Analizi</string>
-    <string name="section_face">Yüz Analizi</string>
-    <string name="report_title">Fal Raporu</string>
+    <string name="status_camera_error">Kamera başlatılamadı</string>
+    <string name="result_title">Sonuç</string>
+    <string name="detail_title">Detay</string>
 </resources>

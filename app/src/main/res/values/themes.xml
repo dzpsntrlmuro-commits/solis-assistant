@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.YuzFali" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/mystic_mid</item>
-        <item name="colorPrimaryVariant">@color/mystic_deep</item>
-        <item name="colorSecondary">@color/accent_gold</item>
-        <item name="android:statusBarColor">@color/night</item>
-        <item name="android:navigationBarColor">@color/night</item>
-        <item name="android:windowBackground">@color/night</item>
+    <style name="Theme.IckiSay" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorPrimaryVariant">@color/panel</item>
+        <item name="colorSecondary">@color/amber</item>
+        <item name="android:statusBarColor">@color/bg_dark</item>
+        <item name="android:navigationBarColor">@color/bg_dark</item>
+        <item name="android:windowBackground">@color/bg_dark</item>
         <item name="android:textColorPrimary">@color/cream_text</item>
     </style>
 </resources>
