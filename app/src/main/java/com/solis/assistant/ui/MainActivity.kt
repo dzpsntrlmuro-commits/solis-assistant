@@ -48,6 +48,10 @@ class MainActivity : AppCompatActivity() {
             requestBatteryOptimizationExclusion()
         }
 
+        binding.btnVideoMerge.setOnClickListener {
+            startActivity(Intent(this, VideoMergeActivity::class.java))
+        }
+
         checkPermissions()
         loadRecords()
     }

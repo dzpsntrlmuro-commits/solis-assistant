@@ -1,4 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Solis Asistan</string>
+    <string name="video_merge_title">Video Birleştir</string>
+    <string name="video_merge_hint">Birden fazla video seçin; sırayla tek bir MP4 olarak birleştirilir. En iyi sonuç için aynı çözünürlük ve formatta klipler kullanın.</string>
+    <string name="video_merge_pick">Video Seç</string>
+    <string name="video_merge_start">Birleştir</string>
+    <string name="video_merge_clear">Listeyi Temizle</string>
+    <string name="video_merge_share">Paylaş / Kaydet</string>
+    <string name="video_merge_remove">Kaldır</string>
+    <string name="video_merge_status_empty">Henüz video seçilmedi</string>
+    <string name="video_merge_status_one">1 video seçildi — en az 1 video daha ekleyin</string>
+    <string name="video_merge_status_ready">%1$d video hazır — Birleştir\'e basın</string>
+    <string name="video_merge_working">Videolar birleştiriliyor…</string>
+    <string name="video_merge_done">Tamamlandı: %1$s</string>
+    <string name="video_merge_success">Videolar birleştirildi</string>
+    <string name="video_merge_need_two">En az 2 video seçin</string>
+    <string name="video_merge_error">Birleştirme hatası: %1$s</string>
+    <string name="video_merge_button">Video Birleştir</string>
 </resources>
