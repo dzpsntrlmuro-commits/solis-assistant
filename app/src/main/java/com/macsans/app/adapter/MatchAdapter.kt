@@ -76,8 +76,10 @@ class MatchAdapter(
             }
 
             if (analysis != null) {
+                val detailed = match.homeHistory != null || match.dataSource.contains("geçmiş", true)
                 winLine.text =
-                    "Kazanma: ${match.homeTeam} %${analysis.homeWinPercent} · Beraberlik %${analysis.drawPercent} · ${match.awayTeam} %${analysis.awayWinPercent}"
+                    (if (detailed) "Detaylı oran: " else "Hızlı oran: ") +
+                        "${match.homeTeam} %${analysis.homeWinPercent} · Ber. %${analysis.drawPercent} · ${match.awayTeam} %${analysis.awayWinPercent}"
                 summary.text = analysis.summary
                 homeBar.progress = analysis.homeWinPercent
                 drawBar.progress = analysis.drawPercent

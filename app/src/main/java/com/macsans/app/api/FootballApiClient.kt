@@ -71,6 +71,18 @@ class FootballApiClient(private val apiKey: String) {
         }
     }
 
+    fun fetchFixtureById(fixtureId: String): Match? {
+        if (apiKey.isBlank() || fixtureId.isBlank()) return null
+        return try {
+            val json = getJson("https://v3.football.api-sports.io/fixtures?id=$fixtureId")
+            val response = json.optJSONArray("response") ?: return null
+            if (response.length() == 0) return null
+            parseFixture(response.getJSONObject(0))
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     fun fetchLiveFixtures(): ApiResult {
         if (apiKey.isBlank()) {
             return ApiResult(emptyList(), "API anahtarı yok", "API anahtarı girilmedi")

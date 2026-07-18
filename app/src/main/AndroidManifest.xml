@@ -19,6 +19,11 @@
             android:parentActivityName=".ui.MainActivity" />
 
         <activity
+            android:name=".ui.CouponsActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.MainActivity" />
+
+        <activity
             android:name=".ui.MatchDetailActivity"
             android:exported="false"
             android:parentActivityName=".ui.MainActivity" />

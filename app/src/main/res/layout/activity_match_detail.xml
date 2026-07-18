@@ -160,13 +160,86 @@
                 android:progressDrawable="@drawable/progress_away" />
 
             <TextView
+                android:id="@+id/txtOddsNote"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:textColor="@color/muted_text"
+                android:textSize="12sp" />
+
+            <TextView
                 android:id="@+id/txtSummaryDetail"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="8dp"
                 android:textColor="@color/cream_text"
                 android:textSize="14sp" />
         </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Kuponuna ekle (1 / X / 2)"
+            android:textColor="@color/accent_amber"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/txtPickHint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Seçimin tahmin gücüne göre işaretlenir (güçlü / orta / zayıf)."
+            android:textColor="@color/muted_text"
+            android:textSize="12sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnPickHome"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:backgroundTint="@color/bar_home"
+                android:text="1 Ev"
+                android:textAllCaps="false"
+                android:textColor="@color/white" />
+
+            <Button
+                android:id="@+id/btnPickDraw"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:backgroundTint="@color/bar_draw"
+                android:text="X"
+                android:textAllCaps="false"
+                android:textColor="#1B1B1B" />
+
+            <Button
+                android:id="@+id/btnPickAway"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:backgroundTint="@color/bar_away"
+                android:text="2 Dep"
+                android:textAllCaps="false"
+                android:textColor="@color/white" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/txtSlipStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="@color/accent_amber"
+            android:textSize="13sp" />
 
         <TextView
             android:layout_width="match_parent"

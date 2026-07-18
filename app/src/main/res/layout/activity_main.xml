@@ -137,12 +137,52 @@
         </com.google.android.material.chip.ChipGroup>
     </HorizontalScrollView>
 
+    <LinearLayout
+        android:id="@+id/couponBar"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="#1A3D2E"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="10dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <TextView
+            android:id="@+id/txtSlipInfo"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Kupon boş"
+            android:textColor="@color/cream_text"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/btnSaveSlip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="8dp"
+            android:text="Kaydet"
+            android:textColor="@color/accent_amber"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/btnMyCoupons"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="8dp"
+            android:text="Kuponlarım"
+            android:textColor="@color/pitch_light"
+            android:textStyle="bold" />
+    </LinearLayout>
+
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipeRefresh"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginTop="8dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/couponBar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/scrollChips">

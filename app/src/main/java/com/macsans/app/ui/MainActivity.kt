@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -13,6 +14,8 @@ import com.google.android.material.chip.Chip
 import com.macsans.app.R
 import com.macsans.app.adapter.MatchAdapter
 import com.macsans.app.data.ApiKeyStore
+import com.macsans.app.data.CouponStore
+import com.macsans.app.data.MatchOddsCache
 import com.macsans.app.data.MatchRepository
 import com.macsans.app.model.Match
 import com.macsans.app.model.MatchStatus
@@ -33,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var emptyView: TextView
     private lateinit var headerMeta: TextView
     private lateinit var apiBanner: TextView
+    private lateinit var slipInfo: TextView
     private lateinit var adapter: MatchAdapter
 
     private var allMatches: List<Match> = emptyList()
@@ -50,11 +54,12 @@ class MainActivity : AppCompatActivity() {
         emptyView = findViewById(R.id.txtEmpty)
         headerMeta = findViewById(R.id.txtHeaderMeta)
         apiBanner = findViewById(R.id.txtApiBanner)
+        slipInfo = findViewById(R.id.txtSlipInfo)
 
         adapter = MatchAdapter { match ->
             val intent = Intent(this, MatchDetailActivity::class.java)
             intent.putExtra(MatchDetailActivity.EXTRA_MATCH_ID, match.id)
-            MatchDetailActivity.cache = match
+            MatchDetailActivity.cache = MatchOddsCache.get(match.id) ?: match
             startActivity(intent)
         }
         recycler.layoutManager = LinearLayoutManager(this)
@@ -71,9 +76,27 @@ class MainActivity : AppCompatActivity() {
         apiBanner.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
+        findViewById<TextView>(R.id.btnMyCoupons).setOnClickListener {
+            startActivity(Intent(this, CouponsActivity::class.java))
+        }
+        findViewById<TextView>(R.id.btnSaveSlip).setOnClickListener {
+            val coupon = CouponStore.createCouponFromSlip(this)
+            if (coupon == null) {
+                Toast.makeText(this, "Kupon boş — maç detayından 1/X/2 seç", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(
+                    this,
+                    "Kupon kaydedildi · ${coupon.legs.size} maç · kombine ~%${coupon.combinedChance}",
+                    Toast.LENGTH_LONG
+                ).show()
+                refreshSlipBar()
+                startActivity(Intent(this, CouponsActivity::class.java))
+            }
+        }
 
         swipe.setOnRefreshListener { loadMatches(showSpinner = true) }
         updateBanner()
+        refreshSlipBar()
         loadMatches(showSpinner = true)
         startLiveTicker()
     }
@@ -81,6 +104,12 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         updateBanner()
+        refreshSlipBar()
+        // Detaydan dönünce sabitlenmiş oranları listeye yansıt
+        if (allMatches.isNotEmpty()) {
+            allMatches = MatchOddsCache.mergeInto(allMatches)
+            renderList()
+        }
         if (ApiKeyStore.hasKey(this) && allMatches.isEmpty()) {
             loadMatches(showSpinner = true)
         }
@@ -91,12 +120,24 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
+    private fun refreshSlipBar() {
+        val slip = CouponStore.loadSlip(this)
+        slipInfo.text = if (slip.isEmpty()) {
+            "Kupon boş · maça gir → 1/X/2 seç"
+        } else {
+            var p = 1.0
+            slip.forEach { leg -> p *= leg.predictedPercent.coerceIn(1, 99) / 100.0 }
+            val chance = (p * 100).toInt().coerceIn(1, 99)
+            "Kupon: ${slip.size} maç · kombine ~%$chance · Kaydet / Kuponlarım"
+        }
+    }
+
     private fun updateBanner() {
         if (ApiKeyStore.hasKey(this)) {
-            apiBanner.text = "Gerçek veri: API-Football bağlı · dokunarak ayarlar"
+            apiBanner.text = "Gerçek veri bağlı · detayda oran bir kez netleşir ve sabitlenir"
             apiBanner.setBackgroundColor(0x332E7D32)
         } else {
-            apiBanner.text = "API anahtarı yok — gerçek maçlar için buraya dokun ve anahtar gir"
+            apiBanner.text = "API anahtarı yok — gerçek maçlar için buraya dokun"
             apiBanner.setBackgroundColor(0x33C62828)
         }
     }
@@ -112,13 +153,13 @@ class MainActivity : AppCompatActivity() {
             val result = withContext(Dispatchers.IO) {
                 MatchRepository.loadDailyMatches(this@MainActivity)
             }
-            allMatches = result.matches
+            allMatches = MatchOddsCache.mergeInto(result.matches)
             val date = SimpleDateFormat("d MMMM yyyy, EEEE", Locale("tr")).format(Date())
-            val liveCount = result.matches.count { it.status == MatchStatus.LIVE }
+            val liveCount = allMatches.count { it.status == MatchStatus.LIVE }
             headerMeta.text = if (result.error != null && result.matches.isEmpty()) {
                 result.error
             } else {
-                "$date · ${result.matches.size} maç · $liveCount canlı · ${result.sourceNote}"
+                "$date · ${allMatches.size} maç · $liveCount canlı · ${result.sourceNote}"
             }
             updateBanner()
             renderList()
@@ -137,7 +178,7 @@ class MainActivity : AppCompatActivity() {
         emptyView.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
         emptyView.text = when {
             !ApiKeyStore.hasKey(this) ->
-                "Gerçek sonuçlar için Ayarlar’dan API-Football anahtarı gir.\nÜcretsiz: dashboard.api-football.com"
+                "Gerçek sonuçlar için Ayarlar’dan API-Football anahtarı gir."
             filter == Filter.LIVE -> "Şu an canlı maç yok."
             filter == Filter.UPCOMING -> "Bugün bekleyen maç kalmadı."
             filter == Filter.FINISHED -> "Henüz biten maç yok."
@@ -151,9 +192,11 @@ class MainActivity : AppCompatActivity() {
             while (isActive) {
                 delay(45_000)
                 if (!ApiKeyStore.hasKey(this@MainActivity)) continue
-                if (allMatches.any { it.status == MatchStatus.LIVE } || allMatches.isNotEmpty()) {
+                if (allMatches.isNotEmpty()) {
                     allMatches = withContext(Dispatchers.IO) {
-                        MatchRepository.refreshLive(this@MainActivity, allMatches)
+                        MatchOddsCache.mergeInto(
+                            MatchRepository.refreshLive(this@MainActivity, allMatches)
+                        )
                     }
                     val liveCount = allMatches.count { it.status == MatchStatus.LIVE }
                     val date = SimpleDateFormat("d MMMM yyyy, EEEE", Locale("tr")).format(Date())

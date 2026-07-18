@@ -13,6 +13,7 @@ import com.macsans.app.model.TeamHistoryProfile
 import com.macsans.app.model.WinBreakdown
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+// MatchOddsCache in same package
 
 object MatchRepository {
 
@@ -67,9 +68,11 @@ object MatchRepository {
             pool.shutdown()
         }
 
+        // Detayda sabitlenen oranları listeye geri yaz
+        val merged = MatchOddsCache.mergeInto(enriched)
         return LoadResult(
-            matches = sortMatches(enriched),
-            sourceNote = "${result.sourceNote} · gösterilen ${enriched.size}" +
+            matches = sortMatches(merged),
+            sourceNote = "${result.sourceNote} · gösterilen ${merged.size}" +
                 if (injuriesByTeam.isNotEmpty()) " · sakatlık dahil" else "",
             error = result.error,
             usingRealApi = true
@@ -117,7 +120,9 @@ object MatchRepository {
         val api = FootballApiClient(key)
         val prediction = api.fetchPrediction(match.id)
         val injuries = api.fetchInjuriesForDate()
-        return enrichMatch(match, injuries, withHistory = true, api = api, prediction = prediction)
+        val detailed = enrichMatch(match, injuries, withHistory = true, api = api, prediction = prediction)
+        MatchOddsCache.put(detailed)
+        return detailed
     }
 
     private fun prioritize(matches: List<Match>): List<Match> {
