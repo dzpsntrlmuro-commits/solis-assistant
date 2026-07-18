@@ -10,9 +10,17 @@ data class VideoItem(
     val viewCount: Long
 )
 
+enum class StreamKind {
+    HLS,
+    DASH,
+    PROGRESSIVE,
+    MERGED
+}
+
 data class PlayableStream(
     val videoUrl: String,
-    val audioUrl: String?,
+    val audioUrl: String? = null,
+    val kind: StreamKind = StreamKind.PROGRESSIVE,
     val title: String,
     val uploader: String,
     val qualityLabel: String

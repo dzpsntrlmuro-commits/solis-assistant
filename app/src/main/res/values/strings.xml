@@ -18,4 +18,6 @@
     <string name="retry">Tekrar dene</string>
     <string name="trending">Popüler</string>
     <string name="back">Geri</string>
+    <string name="open_web_player">Web oynatıcı</string>
+    <string name="web_fallback_meta">Gömülü oynatıcı · reklam istekleri engellenir</string>
 </resources>

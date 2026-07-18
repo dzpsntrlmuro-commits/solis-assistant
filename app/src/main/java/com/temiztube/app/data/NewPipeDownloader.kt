@@ -41,6 +41,13 @@ class NewPipeDownloader private constructor(
         if (request.headers()["User-Agent"].isNullOrEmpty()) {
             builder.header("User-Agent", USER_AGENT)
         }
+        if (request.headers()["Accept-Language"].isNullOrEmpty()) {
+            builder.header("Accept-Language", "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7")
+        }
+        if (request.headers()["Cookie"].isNullOrEmpty()) {
+            // Soften anonymous YouTube bot challenges on some networks
+            builder.header("Cookie", "CONSENT=YES+; SOCS=CAI")
+        }
 
         client.newCall(builder.build()).execute().use { response ->
             if (response.code == 429) {
