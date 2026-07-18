@@ -18,6 +18,7 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.yuzfali.app.R
 import com.yuzfali.app.analysis.FacePoseAnalyzer
+import com.yuzfali.app.data.FaceProfileStore
 import com.yuzfali.app.databinding.ActivityMainBinding
 import com.yuzfali.app.engine.FortuneEngine
 import com.yuzfali.app.model.FortuneReport
@@ -31,6 +32,7 @@ import java.util.concurrent.Executors
 class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private lateinit var binding: ActivityMainBinding
+    private lateinit var profileStore: FaceProfileStore
     private val analyzer = FacePoseAnalyzer()
     private val cameraExecutor = Executors.newSingleThreadExecutor()
 
@@ -57,6 +59,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        profileStore = FaceProfileStore(this)
         textToSpeech = TextToSpeech(this, this)
         setupUi()
         checkPermissions()
@@ -162,14 +165,35 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             return
         }
 
-        val report = FortuneEngine.generate(snapshot)
+        val fingerprint = snapshot.fingerprint
+        if (fingerprint == null) {
+            binding.tvStatus.text = getString(R.string.status_no_face)
+            Toast.makeText(this, "Yüz hatları net algılanamadı. Tekrar deneyin.", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val knownProfile = profileStore.findMatch(fingerprint)
+        val report = if (knownProfile != null) {
+            binding.tvStatus.text = getString(R.string.status_recognized, knownProfile.displayName)
+            knownProfile.report
+        } else {
+            val newReport = FortuneEngine.generate(snapshot)
+            val saved = profileStore.saveProfile(fingerprint, newReport)
+            binding.tvStatus.text = getString(R.string.status_new_face, saved.displayName)
+            newReport
+        }
+
         currentReport = report
         showReport(report)
-        speakReport()
+        speakReport(knownProfile != null)
     }
 
     private fun showReport(report: FortuneReport) {
-        binding.tvStatus.text = getString(R.string.status_done)
+        if (binding.tvStatus.text.isNullOrBlank() ||
+            binding.tvStatus.text == getString(R.string.status_scanning)
+        ) {
+            binding.tvStatus.text = getString(R.string.status_done)
+        }
         binding.tvFaceReport.text = report.faceSection
         binding.tvPostureReport.text = report.postureSection
         binding.tvEmotionReport.text = report.emotionSection
@@ -201,7 +225,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         panel.layoutParams = params
     }
 
-    private fun speakReport() {
+    private fun speakReport(isReturningUser: Boolean = false) {
         val report = currentReport ?: return
         if (!ttsReady) {
             Toast.makeText(this, "Ses motoru hazırlanıyor…", Toast.LENGTH_SHORT).show()
@@ -210,7 +234,12 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         textToSpeech?.stop()
         isSpeaking = true
         binding.btnSpeak.text = getString(R.string.btn_stop_speak)
-        textToSpeech?.speak(report.fullSpeech, TextToSpeech.QUEUE_FLUSH, null, UTTERANCE_ID)
+        val intro = if (isReturningUser) {
+            "Sizi tanıdım. Falınız değişmedi. "
+        } else {
+            ""
+        }
+        textToSpeech?.speak(intro + report.fullSpeech, TextToSpeech.QUEUE_FLUSH, null, UTTERANCE_ID)
     }
 
     private fun stopSpeaking() {

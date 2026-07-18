@@ -17,5 +17,7 @@
     <string name="section_emotion">Duygusal Durum</string>
     <string name="section_posture">Duruş Analizi</string>
     <string name="section_face">Yüz Analizi</string>
+    <string name="status_recognized">Tanınan yüz: %1$s — önceki falınız gösteriliyor</string>
+    <string name="status_new_face">Yeni yüz kaydedildi: %1$s</string>
     <string name="report_title">Fal Raporu</string>
 </resources>
