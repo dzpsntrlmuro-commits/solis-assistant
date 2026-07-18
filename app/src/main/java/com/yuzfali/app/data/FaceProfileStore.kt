@@ -2,6 +2,7 @@ package com.yuzfali.app.data
 
 import android.content.Context
 import com.yuzfali.app.model.FaceFingerprint
+import com.yuzfali.app.model.FaceMatchResult
 import com.yuzfali.app.model.FaceProfile
 import com.yuzfali.app.model.FortuneReport
 import org.json.JSONArray
@@ -12,12 +13,32 @@ class FaceProfileStore(context: Context) {
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    fun findMatch(fingerprint: FaceFingerprint, threshold: Float = MATCH_THRESHOLD): FaceProfile? {
-        return loadProfiles()
-            .map { profile -> profile to fingerprint.distanceTo(profile.fingerprint) }
-            .filter { it.second <= threshold }
-            .minByOrNull { it.second }
-            ?.first
+    fun findMatch(fingerprint: FaceFingerprint, scanQuality: Float): FaceMatchResult {
+        val profiles = loadProfiles()
+        if (profiles.isEmpty()) {
+            return FaceMatchResult(null, 0f, false)
+        }
+        if (scanQuality < MIN_SCAN_QUALITY) {
+            return FaceMatchResult(null, 0f, false)
+        }
+
+        val ranked = profiles
+            .map { profile -> profile to fingerprint.similarityTo(profile.fingerprint) }
+            .sortedByDescending { it.second }
+
+        val best = ranked.first()
+        val second = ranked.getOrNull(1)
+        val similarityGap = best.second - (second?.second ?: 0f)
+
+        val isConfident = best.second >= MIN_SIMILARITY &&
+            similarityGap >= MIN_SIMILARITY_GAP &&
+            best.first.fingerprint.features.size == fingerprint.features.size
+
+        return FaceMatchResult(
+            profile = if (isConfident) best.first else null,
+            similarity = best.second,
+            isConfidentMatch = isConfident
+        )
     }
 
     fun saveProfile(fingerprint: FaceFingerprint, report: FortuneReport): FaceProfile {
@@ -32,8 +53,6 @@ class FaceProfileStore(context: Context) {
         persist(profiles)
         return profile
     }
-
-    fun profileCount(): Int = loadProfiles().size
 
     private fun loadProfiles(): List<FaceProfile> {
         val raw = prefs.getString(KEY_PROFILES, null) ?: return emptyList()
@@ -86,6 +105,8 @@ class FaceProfileStore(context: Context) {
     companion object {
         private const val PREFS_NAME = "yuzfali_face_profiles"
         private const val KEY_PROFILES = "profiles"
-        const val MATCH_THRESHOLD = 0.12f
+        private const val MIN_SIMILARITY = 0.994f
+        private const val MIN_SIMILARITY_GAP = 0.0035f
+        private const val MIN_SCAN_QUALITY = 0.65f
     }
 }

@@ -24,7 +24,7 @@ class FacePoseAnalyzer {
 
     private val faceDetector = FaceDetection.getClient(
         FaceDetectorOptions.Builder()
-            .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
+            .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
             .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_ALL)
             .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_ALL)
             .enableTracking()
@@ -70,7 +70,9 @@ class FacePoseAnalyzer {
     fun snapshot(): AnalysisSnapshot = AnalysisSnapshot(
         face = faceAccumulator.average(),
         pose = poseAccumulator.average(),
-        fingerprint = FaceFingerprintExtractor.average(fingerprintSamples)
+        fingerprint = FaceFingerprintExtractor.average(fingerprintSamples),
+        fingerprintSampleCount = fingerprintSamples.size,
+        fingerprintQuality = FaceFingerprintExtractor.scanQuality(fingerprintSamples)
     )
 
     fun close() {

@@ -29,7 +29,9 @@ data class PoseMetrics(
 data class AnalysisSnapshot(
     val face: FaceMetrics = FaceMetrics(),
     val pose: PoseMetrics = PoseMetrics(),
-    val fingerprint: FaceFingerprint? = null
+    val fingerprint: FaceFingerprint? = null,
+    val fingerprintSampleCount: Int = 0,
+    val fingerprintQuality: Float = 0f
 )
 
 data class FortuneReport(

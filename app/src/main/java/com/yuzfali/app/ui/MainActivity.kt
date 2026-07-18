@@ -166,16 +166,30 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
 
         val fingerprint = snapshot.fingerprint
-        if (fingerprint == null) {
+        if (fingerprint == null || snapshot.fingerprintSampleCount < MIN_FINGERPRINT_SAMPLES) {
             binding.tvStatus.text = getString(R.string.status_no_face)
-            Toast.makeText(this, "Yüz hatları net algılanamadı. Tekrar deneyin.", Toast.LENGTH_LONG).show()
+            Toast.makeText(
+                this,
+                "Yüz hatları net algılanamadı. Yüzünüzü ve omuzlarınızı sabit tutarak tekrar deneyin.",
+                Toast.LENGTH_LONG
+            ).show()
             return
         }
 
-        val knownProfile = profileStore.findMatch(fingerprint)
-        val report = if (knownProfile != null) {
-            binding.tvStatus.text = getString(R.string.status_recognized, knownProfile.displayName)
-            knownProfile.report
+        if (snapshot.fingerprintQuality < MIN_FINGERPRINT_QUALITY) {
+            binding.tvStatus.text = getString(R.string.status_no_face)
+            Toast.makeText(
+                this,
+                "Tarama sırasında çok hareket ettiniz. Sabit durup tekrar deneyin.",
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        val match = profileStore.findMatch(fingerprint, snapshot.fingerprintQuality)
+        val report = if (match.isConfidentMatch && match.profile != null) {
+            binding.tvStatus.text = getString(R.string.status_recognized, match.profile.displayName)
+            match.profile.report
         } else {
             val newReport = FortuneEngine.generate(snapshot)
             val saved = profileStore.saveProfile(fingerprint, newReport)
@@ -185,7 +199,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         currentReport = report
         showReport(report)
-        speakReport(knownProfile != null)
+        speakReport(match.isConfidentMatch)
     }
 
     private fun showReport(report: FortuneReport) {
@@ -286,6 +300,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     companion object {
         private const val SCAN_DURATION_MS = 5000L
         private const val MIN_FACE_FRAMES = 3
+        private const val MIN_FINGERPRINT_SAMPLES = 10
+        private const val MIN_FINGERPRINT_QUALITY = 0.65f
         private const val UTTERANCE_ID = "fortune_speech"
     }
 }
