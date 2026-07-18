@@ -1,15 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="mystic_deep">#1A0A2E</color>
-    <color name="mystic_mid">#3D1F6E</color>
-    <color name="mystic_light">#7B4FBF</color>
-    <color name="night">#0D0618</color>
-    <color name="panel">#1E1035</color>
-    <color name="panel_soft">#2A1848</color>
-    <color name="cream_text">#F3E8FF</color>
-    <color name="muted_text">#B8A0D4</color>
-    <color name="accent_gold">#E8C547</color>
-    <color name="accent_rose">#E85D8A</color>
+    <color name="charcoal">#12100E</color>
+    <color name="ink">#1A1208</color>
+    <color name="panel">#CC1C1612</color>
+    <color name="amber">#E0A23A</color>
+    <color name="amber_dim">#B8842E</color>
+    <color name="amber_soft">#33E0A23A</color>
+    <color name="foam">#F4EFE6</color>
+    <color name="mist">#C9BDAA</color>
     <color name="white">#FFFFFF</color>
-    <color name="scan_ring">#9B6FD4</color>
 </resources>

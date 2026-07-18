@@ -1,21 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Yüz Falı</string>
-    <string name="tagline">Yüzün ve duruşundan geleceğini keşfet</string>
-    <string name="btn_start">Fal Bak</string>
-    <string name="btn_stop">Durdur</string>
-    <string name="btn_speak">Sesli Oku</string>
+    <string name="app_name">İçkiSayacı</string>
+    <string name="count_label">Tespit edilen içki</string>
+    <string name="detail_idle">Kamerayı şişe, kadeh veya bardağa tutun</string>
+    <string name="btn_speak">Sesli Söyle</string>
     <string name="btn_stop_speak">Sustur</string>
-    <string name="btn_retry">Yeniden Dene</string>
-    <string name="status_ready">Kameraya bakın ve fal bak butonuna basın</string>
-    <string name="status_scanning">Yüzünüz ve duruşunuz analiz ediliyor…</string>
-    <string name="status_done">Fal raporunuz hazır</string>
-    <string name="status_no_face">Yüz algılanamadı. Lütfen kameraya bakın.</string>
-    <string name="status_no_pose">Duruş algılanamadı. Omuzlarınızı gösterin.</string>
+    <string name="btn_auto_on">Otomatik Açık</string>
+    <string name="btn_auto_off">Otomatik Kapalı</string>
+    <string name="status_ready">Kamera izni bekleniyor</string>
+    <string name="status_listening">İçkiler taranıyor — sayıyı sesli duyuracaksınız</string>
+    <string name="status_manual">Otomatik ses kapalı — isterseniz Sesli Söyle’ye basın</string>
+    <string name="status_speaking">Söylüyor…</string>
     <string name="status_permission">Kamera izni gerekli</string>
-    <string name="section_future">Gelecek</string>
-    <string name="section_emotion">Duygusal Durum</string>
-    <string name="section_posture">Duruş Analizi</string>
-    <string name="section_face">Yüz Analizi</string>
-    <string name="report_title">Fal Raporu</string>
+    <string name="tts_preparing">Türkçe ses motoru hazırlanıyor…</string>
+    <string name="tts_error">Ses motoru başlatılamadı</string>
+    <string name="tts_no_turkish">Türkçe ses paketi yok; varsayılan ses kullanılacak</string>
 </resources>

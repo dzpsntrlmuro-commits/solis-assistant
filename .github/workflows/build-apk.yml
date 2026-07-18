@@ -35,7 +35,7 @@ jobs:
           APK=$(find . -name "*-debug.apk" 2>/dev/null | head -1)
           if [ -n "$APK" ]; then
             echo "APK found: $APK"
-            cp "$APK" ./YuzFali-debug.apk
+            cp "$APK" ./IckiSayaci-debug.apk
           else
             echo "No APK produced"
           fi
@@ -43,7 +43,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: yuzfali-apk
-          path: YuzFali-debug.apk
+          name: ickisayaci-apk
+          path: IckiSayaci-debug.apk
           if-no-files-found: warn
           retention-days: 30
