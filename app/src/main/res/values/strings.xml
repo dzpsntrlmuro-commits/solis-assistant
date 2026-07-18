@@ -1,21 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Yüz Falı</string>
-    <string name="tagline">Yüzün ve duruşundan geleceğini keşfet</string>
-    <string name="btn_start">Fal Bak</string>
-    <string name="btn_stop">Durdur</string>
-    <string name="btn_speak">Sesli Oku</string>
-    <string name="btn_stop_speak">Sustur</string>
-    <string name="btn_retry">Yeniden Dene</string>
-    <string name="status_ready">Kameraya bakın ve fal bak butonuna basın</string>
-    <string name="status_scanning">Yüzünüz ve duruşunuz analiz ediliyor…</string>
-    <string name="status_done">Fal raporunuz hazır</string>
-    <string name="status_no_face">Yüz algılanamadı. Lütfen kameraya bakın.</string>
-    <string name="status_no_pose">Duruş algılanamadı. Omuzlarınızı gösterin.</string>
-    <string name="status_permission">Kamera izni gerekli</string>
-    <string name="section_future">Gelecek</string>
-    <string name="section_emotion">Duygusal Durum</string>
-    <string name="section_posture">Duruş Analizi</string>
-    <string name="section_face">Yüz Analizi</string>
-    <string name="report_title">Fal Raporu</string>
+    <string name="app_name">TemizTube</string>
+    <string name="search_hint">YouTube\'da video ara…</string>
+    <string name="search">Ara</string>
+    <string name="search_action">Videoları ara</string>
+    <string name="tagline">Reklamsız YouTube arama ve izleme</string>
+    <string name="empty_title">Ne izlemek istersin?</string>
+    <string name="empty_subtitle">Yukarıdan ara; videolar doğrudan stream ile açılır, oynatıcıda reklam yok.</string>
+    <string name="loading">Aranıyor…</string>
+    <string name="loading_stream">Video hazırlanıyor…</string>
+    <string name="no_results">Sonuç bulunamadı</string>
+    <string name="error_network">Bağlantı hatası. İnterneti kontrol edip tekrar dene.</string>
+    <string name="error_generic">Bir hata oluştu: %1$s</string>
+    <string name="error_stream">Video akışı alınamadı</string>
+    <string name="ad_free_badge">Reklamsız</string>
+    <string name="views_format">%1$s görüntülenme</string>
+    <string name="retry">Tekrar dene</string>
+    <string name="trending">Popüler</string>
+    <string name="back">Geri</string>
+    <string name="open_web_player">Web oynatıcı</string>
+    <string name="web_fallback_meta">Gömülü oynatıcı · reklam istekleri engellenir</string>
+    <string name="fast_adblock_meta">Hızlı oynatma · reklamlar engelleniyor</string>
 </resources>
