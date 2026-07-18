@@ -10,7 +10,7 @@
     <string name="status_ready">Kameraya bakın ve fal bak butonuna basın</string>
     <string name="status_scanning">Yüzünüz ve duruşunuz analiz ediliyor…</string>
     <string name="status_done">Fal raporunuz hazır</string>
-    <string name="status_no_face">Yüz algılanamadı. Lütfen kameraya bakın.</string>
+    <string name="status_no_face">Yüz algılanamadı. Lütfen kameraya bakın ve tekrar deneyin.</string>
     <string name="status_no_pose">Duruş algılanamadı. Omuzlarınızı gösterin.</string>
     <string name="status_permission">Kamera izni gerekli</string>
     <string name="section_future">Gelecek</string>

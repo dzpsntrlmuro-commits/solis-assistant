@@ -105,8 +105,9 @@ class FaceProfileStore(context: Context) {
     companion object {
         private const val PREFS_NAME = "yuzfali_face_profiles"
         private const val KEY_PROFILES = "profiles"
-        private const val MIN_SIMILARITY = 0.994f
-        private const val MIN_SIMILARITY_GAP = 0.0035f
-        private const val MIN_SCAN_QUALITY = 0.65f
+        private const val MIN_SIMILARITY = 0.985f
+        private const val MIN_SIMILARITY_GAP = 0.002f
+        // Quality only gates matching confidence, never blocks fortune generation.
+        private const val MIN_SCAN_QUALITY = 0.25f
     }
 }

@@ -9,7 +9,7 @@ import com.google.mlkit.vision.face.FaceDetectorOptions
 import com.google.mlkit.vision.pose.Pose
 import com.google.mlkit.vision.pose.PoseDetection
 import com.google.mlkit.vision.pose.PoseLandmark
-import com.google.mlkit.vision.pose.accurate.AccuratePoseDetectorOptions
+import com.google.mlkit.vision.pose.defaults.PoseDetectorOptions
 import com.yuzfali.app.model.AnalysisSnapshot
 import com.yuzfali.app.model.FaceFingerprint
 import com.yuzfali.app.model.FaceMetrics
@@ -24,7 +24,7 @@ class FacePoseAnalyzer {
 
     private val faceDetector = FaceDetection.getClient(
         FaceDetectorOptions.Builder()
-            .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
+            .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
             .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_ALL)
             .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_ALL)
             .enableTracking()
@@ -32,19 +32,21 @@ class FacePoseAnalyzer {
     )
 
     private val poseDetector = PoseDetection.getClient(
-        AccuratePoseDetectorOptions.Builder()
-            .setDetectorMode(AccuratePoseDetectorOptions.STREAM_MODE)
+        PoseDetectorOptions.Builder()
+            .setDetectorMode(PoseDetectorOptions.STREAM_MODE)
             .build()
     )
 
     private var faceAccumulator = FaceAccumulator()
     private var poseAccumulator = PoseAccumulator()
     private val fingerprintSamples = mutableListOf<FaceFingerprint>()
+    private var frameIndex = 0
 
     fun reset() {
         faceAccumulator = FaceAccumulator()
         poseAccumulator = PoseAccumulator()
         fingerprintSamples.clear()
+        frameIndex = 0
     }
 
     suspend fun analyzeFrame(imageProxy: ImageProxy) {
@@ -54,17 +56,22 @@ class FacePoseAnalyzer {
         }
         val rotation = imageProxy.imageInfo.rotationDegrees
         val inputImage = InputImage.fromMediaImage(mediaImage, rotation)
+        val runPose = frameIndex % 2 == 0
+        frameIndex++
 
-        val faces = detectFaces(inputImage)
-        val pose = detectPose(inputImage)
+        try {
+            val faces = detectFaces(inputImage)
+            faces.firstOrNull()?.let { face ->
+                faceAccumulator.add(face)
+                FaceFingerprintExtractor.fromFace(face)?.let { fingerprintSamples.add(it) }
+            }
 
-        faces.firstOrNull()?.let { face ->
-            faceAccumulator.add(face)
-            FaceFingerprintExtractor.fromFace(face)?.let { fingerprintSamples.add(it) }
+            if (runPose) {
+                detectPose(inputImage)?.let { poseAccumulator.add(it) }
+            }
+        } finally {
+            imageProxy.close()
         }
-        pose?.let { poseAccumulator.add(it) }
-
-        imageProxy.close()
     }
 
     fun snapshot(): AnalysisSnapshot = AnalysisSnapshot(

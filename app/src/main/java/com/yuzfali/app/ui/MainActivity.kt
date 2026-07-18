@@ -5,7 +5,6 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
-import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -26,8 +25,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.util.Locale
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
@@ -86,7 +87,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
-    private var analyzingFrame = false
+    private val analyzingFrame = AtomicBoolean(false)
 
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
@@ -97,21 +98,22 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             }
 
             val imageAnalysis = ImageAnalysis.Builder()
+                .setTargetResolution(android.util.Size(640, 480))
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
                 .also { analysis ->
                     analysis.setAnalyzer(cameraExecutor) { imageProxy ->
-                        if (isScanning && !analyzingFrame) {
-                            analyzingFrame = true
-                            lifecycleScope.launch {
-                                try {
-                                    analyzer.analyzeFrame(imageProxy)
-                                } finally {
-                                    analyzingFrame = false
-                                }
-                            }
-                        } else {
+                        if (!isScanning || !analyzingFrame.compareAndSet(false, true)) {
                             imageProxy.close()
+                            return@setAnalyzer
+                        }
+                        try {
+                            // Analyze on the camera executor thread for higher frame throughput.
+                            runBlocking {
+                                analyzer.analyzeFrame(imageProxy)
+                            }
+                        } finally {
+                            analyzingFrame.set(false)
                         }
                     }
                 }
@@ -165,41 +167,31 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             return
         }
 
+        // Motion/quality is advisory for identity matching only — never block the fortune.
         val fingerprint = snapshot.fingerprint
-        if (fingerprint == null || snapshot.fingerprintSampleCount < MIN_FINGERPRINT_SAMPLES) {
-            binding.tvStatus.text = getString(R.string.status_no_face)
-            Toast.makeText(
-                this,
-                "Yüz hatları net algılanamadı. Yüzünüzü ve omuzlarınızı sabit tutarak tekrar deneyin.",
-                Toast.LENGTH_LONG
-            ).show()
-            return
+        val match = if (fingerprint != null && snapshot.fingerprintSampleCount >= MIN_FINGERPRINT_SAMPLES) {
+            profileStore.findMatch(fingerprint, snapshot.fingerprintQuality)
+        } else {
+            null
         }
 
-        if (snapshot.fingerprintQuality < MIN_FINGERPRINT_QUALITY) {
-            binding.tvStatus.text = getString(R.string.status_no_face)
-            Toast.makeText(
-                this,
-                "Tarama sırasında çok hareket ettiniz. Sabit durup tekrar deneyin.",
-                Toast.LENGTH_LONG
-            ).show()
-            return
-        }
-
-        val match = profileStore.findMatch(fingerprint, snapshot.fingerprintQuality)
-        val report = if (match.isConfidentMatch && match.profile != null) {
+        val report = if (match != null && match.isConfidentMatch && match.profile != null) {
             binding.tvStatus.text = getString(R.string.status_recognized, match.profile.displayName)
             FortuneEngine.refreshLiveSections(snapshot, match.profile.report)
         } else {
             val newReport = FortuneEngine.generate(snapshot)
-            val saved = profileStore.saveProfile(fingerprint, newReport)
-            binding.tvStatus.text = getString(R.string.status_new_face, saved.displayName)
+            if (fingerprint != null && snapshot.fingerprintSampleCount >= MIN_FINGERPRINT_SAMPLES) {
+                val saved = profileStore.saveProfile(fingerprint, newReport)
+                binding.tvStatus.text = getString(R.string.status_new_face, saved.displayName)
+            } else {
+                binding.tvStatus.text = getString(R.string.status_done)
+            }
             newReport
         }
 
         currentReport = report
         showReport(report)
-        speakReport(match.isConfidentMatch)
+        speakReport(match?.isConfidentMatch == true)
     }
 
     private fun showReport(report: FortuneReport) {
@@ -298,10 +290,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     companion object {
-        private const val SCAN_DURATION_MS = 5000L
-        private const val MIN_FACE_FRAMES = 3
-        private const val MIN_FINGERPRINT_SAMPLES = 10
-        private const val MIN_FINGERPRINT_QUALITY = 0.65f
+        private const val SCAN_DURATION_MS = 4500L
+        private const val MIN_FACE_FRAMES = 2
+        private const val MIN_FINGERPRINT_SAMPLES = 3
         private const val UTTERANCE_ID = "fortune_speech"
     }
 }
