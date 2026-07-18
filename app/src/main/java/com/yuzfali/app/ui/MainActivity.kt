@@ -189,7 +189,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val match = profileStore.findMatch(fingerprint, snapshot.fingerprintQuality)
         val report = if (match.isConfidentMatch && match.profile != null) {
             binding.tvStatus.text = getString(R.string.status_recognized, match.profile.displayName)
-            match.profile.report
+            FortuneEngine.refreshLiveSections(snapshot, match.profile.report)
         } else {
             val newReport = FortuneEngine.generate(snapshot)
             val saved = profileStore.saveProfile(fingerprint, newReport)
@@ -249,7 +249,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         isSpeaking = true
         binding.btnSpeak.text = getString(R.string.btn_stop_speak)
         val intro = if (isReturningUser) {
-            "Sizi tanıdım. Falınız değişmedi. "
+            "Sizi tanıdım. Karakter ve gelecek yorumunuz aynı, anlık duygu ve duruşunuz güncellendi. "
         } else {
             ""
         }

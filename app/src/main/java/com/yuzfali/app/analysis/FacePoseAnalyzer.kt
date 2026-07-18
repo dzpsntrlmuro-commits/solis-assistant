@@ -96,35 +96,67 @@ class FacePoseAnalyzer {
 
     private class FaceAccumulator {
         private var smile = 0f
+        private var smileMin = Float.MAX_VALUE
+        private var smileMax = Float.MIN_VALUE
         private var leftEye = 0f
         private var rightEye = 0f
         private var eulerY = 0f
         private var eulerZ = 0f
+        private var eulerX = 0f
         private var width = 0f
         private var height = 0f
+        private var eyeDistanceRatio = 0f
+        private var noseToMouthRatio = 0f
+        private var mouthWidthRatio = 0f
+        private var cheekWidthRatio = 0f
+        private var landmarkAsymmetry = 0f
+        private var landmarkCount = 0
         private var count = 0
 
         fun add(face: Face) {
-            smile += face.smilingProbability ?: 0f
+            val smileValue = face.smilingProbability ?: 0f
+            smile += smileValue
+            smileMin = minOf(smileMin, smileValue)
+            smileMax = maxOf(smileMax, smileValue)
             leftEye += face.leftEyeOpenProbability ?: 0.5f
             rightEye += face.rightEyeOpenProbability ?: 0.5f
             eulerY += face.headEulerAngleY
             eulerZ += face.headEulerAngleZ
+            eulerX += face.headEulerAngleX
             width += face.boundingBox.width().toFloat()
             height += face.boundingBox.height().toFloat()
+
+            FaceMetricsExtractor.landmarkFeatures(face)?.let { lm ->
+                eyeDistanceRatio += lm.eyeDistanceRatio
+                noseToMouthRatio += lm.noseToMouthRatio
+                mouthWidthRatio += lm.mouthWidthRatio
+                cheekWidthRatio += lm.cheekWidthRatio
+                landmarkAsymmetry += lm.landmarkAsymmetry
+                landmarkCount++
+            }
             count++
         }
 
         fun average(): FaceMetrics {
             if (count == 0) return FaceMetrics()
+            val avgSmile = smile / count
             return FaceMetrics(
-                smileProbability = smile / count,
+                smileProbability = avgSmile,
+                smileMin = if (smileMin == Float.MAX_VALUE) avgSmile else smileMin,
+                smileMax = if (smileMax == Float.MIN_VALUE) avgSmile else smileMax,
                 leftEyeOpen = leftEye / count,
                 rightEyeOpen = rightEye / count,
                 headEulerY = eulerY / count,
                 headEulerZ = eulerZ / count,
+                headEulerX = eulerX / count,
                 faceWidth = width / count,
                 faceHeight = height / count,
+                eyeDistanceRatio = if (landmarkCount > 0) eyeDistanceRatio / landmarkCount else 0f,
+                noseToMouthRatio = if (landmarkCount > 0) noseToMouthRatio / landmarkCount else 0f,
+                mouthWidthRatio = if (landmarkCount > 0) mouthWidthRatio / landmarkCount else 0f,
+                cheekWidthRatio = if (landmarkCount > 0) cheekWidthRatio / landmarkCount else 0f,
+                landmarkAsymmetry = if (landmarkCount > 0) landmarkAsymmetry / landmarkCount else 0f,
+                expressionVolatility = if (smileMax > smileMin) smileMax - smileMin else 0f,
                 frameCount = count
             )
         }
@@ -137,6 +169,8 @@ class FacePoseAnalyzer {
         private var headOffset = 0f
         private var confidence = 0f
         private var count = 0
+        private val tiltSamples = mutableListOf<Float>()
+        private val spineSamples = mutableListOf<Float>()
 
         fun add(pose: Pose) {
             val leftShoulderLm = pose.getPoseLandmark(PoseLandmark.LEFT_SHOULDER)
@@ -197,19 +231,30 @@ class FacePoseAnalyzer {
             shoulderWidth += width
             headOffset += offset
             confidence += avgInFrame
+            tiltSamples.add(tilt)
+            spineSamples.add(spine)
             count++
         }
 
         fun average(): PoseMetrics {
             if (count == 0) return PoseMetrics()
+            val stability = computeStability(tiltSamples) * 0.5f + computeStability(spineSamples) * 0.5f
             return PoseMetrics(
                 shoulderTilt = shoulderTilt / count,
                 spineAngle = spineAngle / count,
                 shoulderWidth = shoulderWidth / count,
                 headOffset = headOffset / count,
                 confidence = confidence / count,
+                postureStability = stability,
                 frameCount = count
             )
+        }
+
+        private fun computeStability(samples: List<Float>): Float {
+            if (samples.size < 2) return 1f
+            val mean = samples.average().toFloat()
+            val variance = samples.map { (it - mean) * (it - mean) }.average().toFloat()
+            return (1f - kotlin.math.sqrt(variance) / 20f).coerceIn(0f, 1f)
         }
 
         private fun midpoint(a: PointF, b: PointF): PointF =

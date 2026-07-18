@@ -2,12 +2,21 @@ package com.yuzfali.app.model
 
 data class FaceMetrics(
     val smileProbability: Float = 0f,
+    val smileMin: Float = 0f,
+    val smileMax: Float = 0f,
     val leftEyeOpen: Float = 0f,
     val rightEyeOpen: Float = 0f,
     val headEulerY: Float = 0f,
     val headEulerZ: Float = 0f,
+    val headEulerX: Float = 0f,
     val faceWidth: Float = 0f,
     val faceHeight: Float = 0f,
+    val eyeDistanceRatio: Float = 0f,
+    val noseToMouthRatio: Float = 0f,
+    val mouthWidthRatio: Float = 0f,
+    val cheekWidthRatio: Float = 0f,
+    val landmarkAsymmetry: Float = 0f,
+    val expressionVolatility: Float = 0f,
     val frameCount: Int = 0
 ) {
     val eyeSymmetry: Float
@@ -15,6 +24,9 @@ data class FaceMetrics(
 
     val faceRatio: Float
         get() = if (faceHeight > 0f) faceWidth / faceHeight else 1f
+
+    val smileRange: Float
+        get() = (smileMax - smileMin).coerceAtLeast(0f)
 }
 
 data class PoseMetrics(
@@ -23,6 +35,7 @@ data class PoseMetrics(
     val shoulderWidth: Float = 0f,
     val headOffset: Float = 0f,
     val confidence: Float = 0f,
+    val postureStability: Float = 0f,
     val frameCount: Int = 0
 )
 
@@ -40,4 +53,22 @@ data class FortuneReport(
     val emotionSection: String,
     val futureSection: String,
     val fullSpeech: String
-)
+) {
+    fun withLiveSections(emotionSection: String, postureSection: String): FortuneReport {
+        val fullSpeech = buildString {
+            append("Yüz falı raporunuz hazır. ")
+            append(faceSection)
+            append(" ")
+            append(postureSection)
+            append(" ")
+            append(emotionSection)
+            append(" ")
+            append(futureSection)
+        }
+        return copy(
+            postureSection = postureSection,
+            emotionSection = emotionSection,
+            fullSpeech = fullSpeech
+        )
+    }
+}
