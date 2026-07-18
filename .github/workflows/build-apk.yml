@@ -2,7 +2,7 @@ name: Build APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, 'cursor/**' ]
   workflow_dispatch:
 
 jobs:
@@ -18,14 +18,9 @@ jobs:
       - uses: android-actions/setup-android@v3
       - run: chmod +x gradlew
 
-      - name: Build APK (capture errors)
+      - name: Build APK
         run: |
-          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 > build-output.txt || true
-          # Sadece hata satırlarını göster
-          echo "=== ERRORS ==="
-          grep -E "(error:|Error:|FAILED|Exception|Cannot|Could not|Unresolved)" build-output.txt | head -50 || echo "No error lines found"
-          echo "=== LAST 80 LINES ==="
-          tail -80 build-output.txt
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee build-output.txt
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -37,10 +32,10 @@ jobs:
       - name: Upload APK if exists
         if: always()
         run: |
-          APK=$(find . -name "*.apk" 2>/dev/null | head -1)
+          APK=$(find . -name "*-debug.apk" 2>/dev/null | head -1)
           if [ -n "$APK" ]; then
             echo "APK found: $APK"
-            cp "$APK" ./app-debug.apk
+            cp "$APK" ./MacSans-debug.apk
           else
             echo "No APK produced"
           fi
@@ -48,7 +43,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: solis-apk
-          path: app-debug.apk
+          name: macsans-apk
+          path: MacSans-debug.apk
           if-no-files-found: warn
           retention-days: 30

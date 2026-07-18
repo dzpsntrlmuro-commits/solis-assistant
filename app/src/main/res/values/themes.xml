@@ -1,11 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.SolisAssistant" parent="Theme.MaterialComponents.Light.NoActionBar">
-        <item name="colorPrimary">#1A237E</item>
-        <item name="colorPrimaryVariant">#283593</item>
-        <item name="colorOnPrimary">#FFFFFF</item>
-        <item name="colorSecondary">#FF6F00</item>
-        <item name="colorOnSecondary">#FFFFFF</item>
-        <item name="android:statusBarColor">#0D1657</item>
+    <style name="Theme.MacSans" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/pitch_mid</item>
+        <item name="colorPrimaryVariant">@color/pitch_deep</item>
+        <item name="colorSecondary">@color/accent_amber</item>
+        <item name="android:statusBarColor">@color/night</item>
+        <item name="android:navigationBarColor">@color/night</item>
+        <item name="android:windowBackground">@color/night</item>
+        <item name="android:textColorPrimary">@color/cream_text</item>
+        <item name="chipStyle">@style/Widget.MacSans.Chip</item>
+    </style>
+
+    <style name="Widget.MacSans.Chip" parent="Widget.MaterialComponents.Chip.Choice">
+        <item name="chipBackgroundColor">@color/panel_soft</item>
+        <item name="android:textColor">@color/cream_text</item>
+        <item name="checkedIconVisible">false</item>
     </style>
 </resources>

@@ -1,4 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Solis Asistan</string>
+    <string name="app_name">MaçŞansı</string>
+    <string name="tagline">Hava · sakatlık · duygu · canlı oran</string>
+    <string name="filter_all">Tümü</string>
+    <string name="filter_live">Canlı</string>
+    <string name="filter_upcoming">Bugün</string>
+    <string name="filter_finished">Biten</string>
+    <string name="empty_matches">Maç bulunamadı</string>
+    <string name="detail_title">Maç analizi</string>
+    <string name="back">← Listeye dön</string>
+    <string name="section_weather">Hava etkisi</string>
+    <string name="section_injury">Sakatlık etkisi</string>
+    <string name="section_emotion">Duygusal durum</string>
+    <string name="section_form">Form</string>
+    <string name="section_live">Canlı akış</string>
+    <string name="section_players">Oyuncu durumları</string>
 </resources>
