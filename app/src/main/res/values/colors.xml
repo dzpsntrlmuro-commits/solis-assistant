@@ -1,17 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="pitch_deep">#0B3D2E</color>
-    <color name="pitch_mid">#136F4C</color>
-    <color name="pitch_light">#1FA971</color>
-    <color name="night">#071510</color>
-    <color name="panel">#102820</color>
-    <color name="panel_soft">#163529</color>
-    <color name="cream_text">#E8F5E9</color>
-    <color name="muted_text">#A7C4B5</color>
-    <color name="accent_amber">#E8B84A</color>
-    <color name="live_red">#E53935</color>
+    <color name="ink">#0B1C1F</color>
+    <color name="ink_soft">#142A2E</color>
+    <color name="mist">#1E3A3F</color>
+    <color name="gold">#D4A574</color>
+    <color name="gold_bright">#E8C49A</color>
+    <color name="cream">#F3E6D4</color>
+    <color name="muted">#A8B8B5</color>
+    <color name="accent_teal">#2F6F6A</color>
+    <color name="overlay">#990B1C1F</color>
     <color name="white">#FFFFFF</color>
-    <color name="bar_home">#2E7D32</color>
-    <color name="bar_draw">#F9A825</color>
-    <color name="bar_away">#0277BD</color>
+    <color name="black">#000000</color>
 </resources>

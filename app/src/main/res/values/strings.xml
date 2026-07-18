@@ -1,18 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">MaçŞansı</string>
-    <string name="tagline">Hava · sakatlık · duygu · canlı oran</string>
-    <string name="filter_all">Tümü</string>
-    <string name="filter_live">Canlı</string>
-    <string name="filter_upcoming">Bugün</string>
-    <string name="filter_finished">Biten</string>
-    <string name="empty_matches">Maç bulunamadı</string>
-    <string name="detail_title">Maç analizi</string>
-    <string name="back">← Listeye dön</string>
-    <string name="section_weather">Hava etkisi</string>
-    <string name="section_injury">Sakatlık etkisi</string>
-    <string name="section_emotion">Duygusal durum</string>
-    <string name="section_form">Form</string>
-    <string name="section_live">Canlı akış</string>
-    <string name="section_players">Oyuncu durumları</string>
+    <string name="app_name">AynaSesi</string>
+    <string name="brand_name">AynaSesi</string>
+    <string name="tagline">Yüzüne bakarak hayatının sesini duyar.</string>
+    <string name="cta_start">Falıma bak</string>
+    <string name="capture_hint">Yüzünü çerçeveye al, ışığı yüzüne tut.</string>
+    <string name="capture_button">Yüzümü oku</string>
+    <string name="analyzing">Yüz hatların okunuyor…</string>
+    <string name="permission_needed">Kamera izni olmadan fal bakılamaz.</string>
+    <string name="no_face">Yüz bulunamadı. Lütfen tekrar dene.</string>
+    <string name="fortune_title">Senin sesin</string>
+    <string name="replay">Tekrar dinle</string>
+    <string name="new_reading">Yeni fal</string>
+    <string name="disclaimer">Eğlence amaçlıdır. Gerçek hayatta kararların için yalnızca sana güven.</string>
 </resources>

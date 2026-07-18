@@ -1,0 +1,19 @@
+AynaSesi - Yapay Zeka Destekli Yüz Falı
+========================================
+
+APK: docs/AynaSesi-YuzFali.apk
+
+Kurulum (Android telefon):
+1. APK dosyasını telefonuna aktar.
+2. Ayarlar > Güvenlik > Bilinmeyen kaynaklardan uygulama yüklemeye izin ver.
+3. AynaSesi-YuzFali.apk dosyasına dokunup yükle.
+4. Uygulamayı aç > "Falıma bak" > kamera izni ver > yüzünü çerçeveye al > "Yüzümü oku".
+
+Ne yapar?
+- Ön kamerayla yüzünü çeker
+- ML Kit ile gülümseme, bakış ve yüz duruşunu analiz eder
+- Kısa bir fal metni üretir
+- Türkçe sesli anlatım (TTS) ile video benzeri akışta okur
+
+Not: Eğlence amaçlıdır. İnternet gerekmez (yüz analizi cihazda çalışır).
+Android 8.0+ (API 26) gerekir.
