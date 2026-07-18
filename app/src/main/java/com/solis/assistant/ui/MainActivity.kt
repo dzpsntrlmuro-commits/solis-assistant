@@ -44,6 +44,10 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, DailySummaryActivity::class.java))
         }
 
+        binding.btnVideoMerge.setOnClickListener {
+            startActivity(Intent(this, VideoMergeActivity::class.java))
+        }
+
         binding.btnBatteryOptimize.setOnClickListener {
             requestBatteryOptimizationExclusion()
         }

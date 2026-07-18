@@ -15,7 +15,7 @@ android {
         versionCode 1
         versionName "1.0"
 
-        buildConfigField "String", "GEMINI_API_KEY", "\"${project.findProperty('GEMINI_API_KEY') ?: System.getenv('GOOGLE_API_KEY') ?: ''}""
+        buildConfigField "String", "GEMINI_API_KEY", "\"${project.findProperty('GEMINI_API_KEY') ?: System.getenv('GOOGLE_API_KEY') ?: ''}\""
     }
 
     buildTypes {

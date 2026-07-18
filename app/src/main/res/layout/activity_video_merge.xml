@@ -7,52 +7,54 @@
     android:padding="16dp">
 
     <TextView
-        android:id="@+id/tvTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Solis Asistan"
+        android:text="Video Birleştir"
         android:textSize="24sp"
         android:textStyle="bold"
         android:layout_marginBottom="8dp"/>
 
     <TextView
-        android:id="@+id/tvStatus"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Hazır"
+        android:text="Galeriden en az 2 video seçin. Birleştirme telefonunuzda yapılır, dosya yüklemeniz gerekmez."
         android:textSize="14sp"
         android:layout_marginBottom="16dp"/>
 
     <Button
-        android:id="@+id/btnToggle"
+        android:id="@+id/btnSelectVideos"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Başlat"
+        android:text="Video Seç"
         android:layout_marginBottom="8dp"/>
 
     <Button
-        android:id="@+id/btnSummary"
+        android:id="@+id/btnMerge"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Günlük Özet"
+        android:text="Birleştir"
+        android:enabled="false"
         android:layout_marginBottom="8dp"/>
 
-    <Button
-        android:id="@+id/btnVideoMerge"
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Video Birleştir"
+        android:indeterminate="true"
+        android:visibility="gone"
         android:layout_marginBottom="8dp"/>
 
-    <Button
-        android:id="@+id/btnBatteryOptimize"
+    <TextView
+        android:id="@+id/tvStatus"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Pil Optimizasyonunu Devre Dışı Bırak"
+        android:text="Henüz video seçilmedi"
+        android:textSize="14sp"
         android:layout_marginBottom="16dp"/>
 
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvRecords"
+        android:id="@+id/rvVideos"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"/>
