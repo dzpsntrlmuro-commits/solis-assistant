@@ -1,12 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.YuzFali" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/mystic_mid</item>
-        <item name="colorPrimaryVariant">@color/mystic_deep</item>
-        <item name="colorSecondary">@color/accent_gold</item>
-        <item name="android:statusBarColor">@color/night</item>
-        <item name="android:navigationBarColor">@color/night</item>
-        <item name="android:windowBackground">@color/night</item>
-        <item name="android:textColorPrimary">@color/cream_text</item>
+    <style name="Theme.SafTube" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/teal_500</item>
+        <item name="colorPrimaryVariant">@color/teal_600</item>
+        <item name="colorOnPrimary">@color/ink_950</item>
+        <item name="colorSecondary">@color/amber_400</item>
+        <item name="colorOnSecondary">@color/ink_950</item>
+        <item name="android:colorBackground">@color/ink_950</item>
+        <item name="colorSurface">@color/ink_900</item>
+        <item name="colorOnSurface">@color/mist_100</item>
+        <item name="android:statusBarColor">@color/ink_950</item>
+        <item name="android:navigationBarColor">@color/ink_950</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:fontFamily">@font/outfit_regular</item>
+        <item name="fontFamily">@font/outfit_regular</item>
+    </style>
+
+    <style name="Text.Brand" parent="TextAppearance.MaterialComponents.Headline4">
+        <item name="android:fontFamily">@font/outfit_bold</item>
+        <item name="android:textColor">@color/mist_100</item>
+        <item name="android:textSize">28sp</item>
+        <item name="android:letterSpacing">-0.02</item>
+    </style>
+
+    <style name="Text.Title" parent="TextAppearance.MaterialComponents.Subtitle1">
+        <item name="android:fontFamily">@font/outfit_semibold</item>
+        <item name="android:textColor">@color/mist_100</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <style name="Text.Body" parent="TextAppearance.MaterialComponents.Body2">
+        <item name="android:fontFamily">@font/outfit_regular</item>
+        <item name="android:textColor">@color/mist_200</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <style name="Text.Meta" parent="TextAppearance.MaterialComponents.Caption">
+        <item name="android:fontFamily">@font/outfit_medium</item>
+        <item name="android:textColor">@color/mist_400</item>
+        <item name="android:textSize">12sp</item>
     </style>
 </resources>

@@ -1,21 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Yüz Falı</string>
-    <string name="tagline">Yüzün ve duruşundan geleceğini keşfet</string>
-    <string name="btn_start">Fal Bak</string>
-    <string name="btn_stop">Durdur</string>
-    <string name="btn_speak">Sesli Oku</string>
-    <string name="btn_stop_speak">Sustur</string>
-    <string name="btn_retry">Yeniden Dene</string>
-    <string name="status_ready">Kameraya bakın ve fal bak butonuna basın</string>
-    <string name="status_scanning">Yüzünüz ve duruşunuz analiz ediliyor…</string>
-    <string name="status_done">Fal raporunuz hazır</string>
-    <string name="status_no_face">Yüz algılanamadı. Lütfen kameraya bakın.</string>
-    <string name="status_no_pose">Duruş algılanamadı. Omuzlarınızı gösterin.</string>
-    <string name="status_permission">Kamera izni gerekli</string>
-    <string name="section_future">Gelecek</string>
-    <string name="section_emotion">Duygusal Durum</string>
-    <string name="section_posture">Duruş Analizi</string>
-    <string name="section_face">Yüz Analizi</string>
-    <string name="report_title">Fal Raporu</string>
+    <string name="app_name">SafTube</string>
+    <string name="tagline">Reklamsız YouTube arama ve izleme</string>
+    <string name="search_hint">Video, kanal veya içerik ara…</string>
+    <string name="search_action">Ara</string>
+    <string name="trending">Keşfet</string>
+    <string name="results_for">Sonuçlar: %1$s</string>
+    <string name="empty_hint">YouTube videolarını reklamsız ara ve izle</string>
+    <string name="empty_sub">Arama kutusuna bir konu yazın</string>
+    <string name="loading">Yükleniyor…</string>
+    <string name="error_network">Bağlantı hatası. İnternetini kontrol et.</string>
+    <string name="error_empty">Sonuç bulunamadı</string>
+    <string name="error_play">Video oynatılamadı. Başka bir kaynak deneniyor…</string>
+    <string name="ad_blocked_badge">Reklam engellendi</string>
+    <string name="ad_free">Reklamsız</string>
+    <string name="views_format">%1$s izlenme</string>
+    <string name="duration_live">CANLI</string>
+    <string name="related">İlgili videolar</string>
+    <string name="share">Paylaş</string>
+    <string name="open_external">Harici aç</string>
+    <string name="blocked_count">%1$d reklam alanı engellendi</string>
+    <string name="player_loading">Akış hazırlanıyor…</string>
+    <string name="filter_videos">Videolar</string>
+    <string name="filter_all">Tümü</string>
+    <string name="retry">Tekrar dene</string>
+    <string name="back">Geri</string>
 </resources>

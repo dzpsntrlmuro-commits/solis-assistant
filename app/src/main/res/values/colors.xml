@@ -1,15 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="mystic_deep">#1A0A2E</color>
-    <color name="mystic_mid">#3D1F6E</color>
-    <color name="mystic_light">#7B4FBF</color>
-    <color name="night">#0D0618</color>
-    <color name="panel">#1E1035</color>
-    <color name="panel_soft">#2A1848</color>
-    <color name="cream_text">#F3E8FF</color>
-    <color name="muted_text">#B8A0D4</color>
-    <color name="accent_gold">#E8C547</color>
-    <color name="accent_rose">#E85D8A</color>
+    <!-- Ink + teal palette — distinct from default AI purple/cream looks -->
+    <color name="ink_950">#070B10</color>
+    <color name="ink_900">#0B1220</color>
+    <color name="ink_800">#121A2B</color>
+    <color name="ink_700">#1A2438</color>
+    <color name="ink_600">#243049</color>
+    <color name="mist_100">#E8EEF7</color>
+    <color name="mist_200">#C5D0E0</color>
+    <color name="mist_400">#7A8BA3</color>
+    <color name="teal_400">#2DD4BF</color>
+    <color name="teal_500">#14B8A6</color>
+    <color name="teal_600">#0D9488</color>
+    <color name="amber_400">#FBBF24</color>
+    <color name="coral_400">#FB7185</color>
     <color name="white">#FFFFFF</color>
-    <color name="scan_ring">#9B6FD4</color>
+    <color name="black">#000000</color>
+    <color name="overlay">#99070B10</color>
+    <color name="card_stroke">#1FFFFFFF</color>
 </resources>
