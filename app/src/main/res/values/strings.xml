@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">MaçŞansı</string>
-    <string name="tagline">Gerçek maç · hava · sakatlık · canlı oran</string>
+    <string name="app_name">Muro ile Maç Şansı</string>
+    <string name="tagline">Geçmiş hava · sakatlık · duygusal çöküş · canlı oran</string>
+    <string name="section_history">Geçmiş maç etkisi</string>
     <string name="filter_all">Tümü</string>
     <string name="filter_live">Canlı</string>
     <string name="filter_upcoming">Bugün</string>

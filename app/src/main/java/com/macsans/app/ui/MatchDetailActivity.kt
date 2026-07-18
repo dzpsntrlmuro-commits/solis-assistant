@@ -75,6 +75,8 @@ class MatchDetailActivity : AppCompatActivity() {
         findViewById<ProgressBar>(R.id.detailBarAway).progress = analysis.awayWinPercent
 
         findViewById<TextView>(R.id.txtSummaryDetail).text = analysis.summary
+        findViewById<TextView>(R.id.txtHistoryFactor).text =
+            analysis.historyFactor.ifBlank { "Geçmiş analiz yükleniyor…" }
         findViewById<TextView>(R.id.txtWeatherFactor).text = analysis.weatherFactor
         findViewById<TextView>(R.id.txtInjuryFactor).text = analysis.injuryFactor
         findViewById<TextView>(R.id.txtEmotionFactor).text = analysis.emotionFactor

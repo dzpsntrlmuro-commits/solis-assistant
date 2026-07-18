@@ -3,6 +3,7 @@ package com.macsans.app.engine
 import com.macsans.app.model.Match
 import com.macsans.app.model.MatchStatus
 import com.macsans.app.model.PlayerStatus
+import com.macsans.app.model.TeamHistoryProfile
 import com.macsans.app.model.WeatherInfo
 import com.macsans.app.model.WinBreakdown
 import kotlin.math.max
@@ -23,37 +24,44 @@ object PredictionEngine {
         var away: Double
 
         if (apiPercents != null && match.status != MatchStatus.FINISHED) {
-            // Start from real API-Football prediction, then adjust with live/weather/injury
             home = apiPercents.first.toDouble()
             draw = apiPercents.second.toDouble()
             away = apiPercents.third.toDouble()
-
-            val weatherShift = weatherShift(w)
-            home += weatherShift.first * 0.6
-            away += weatherShift.second * 0.6
-            draw += weatherShift.third * 0.6
-
-            home -= injuryPenalty(match.homePlayers) * 0.7
-            away -= injuryPenalty(match.awayPlayers) * 0.7
-            home += emotionBonus(match.homePlayers)
-            away += emotionBonus(match.awayPlayers)
         } else {
             home = 40.0 + match.homeForm * 0.35
             away = 40.0 + match.awayForm * 0.35
             draw = 20.0
-
-            val weatherShift = weatherShift(w)
-            home += weatherShift.first
-            away += weatherShift.second
-            draw += weatherShift.third
-
-            home -= injuryPenalty(match.homePlayers)
-            away -= injuryPenalty(match.awayPlayers)
-            home += emotionBonus(match.homePlayers)
-            away += emotionBonus(match.awayPlayers)
         }
 
-        var liveNote = "Maç henüz başlamadı; oranlar gerçek fikstür + hava + sakatlık verisine göre."
+        // 1) Bugünkü hava
+        val weatherShift = weatherShift(w)
+        home += weatherShift.first
+        away += weatherShift.second
+        draw += weatherShift.third
+
+        // 2) Geçmiş maçlarda benzer zorlu hava performansı
+        val histWeather = historicalWeatherAdjust(match, w)
+        home += histWeather.first
+        away += histWeather.second
+        draw += histWeather.third
+
+        // 3) Sakatlık
+        home -= injuryPenalty(match.homePlayers)
+        away -= injuryPenalty(match.awayPlayers)
+
+        // 4) Duygusal durum + çöküş (geçmiş yenilgi serisi)
+        home += emotionBonus(match.homePlayers)
+        away += emotionBonus(match.awayPlayers)
+        val collapse = collapseAdjust(match.homeHistory, match.awayHistory)
+        home += collapse.first
+        away += collapse.second
+        draw += collapse.third
+
+        // 5) Geçmiş form skoru
+        match.homeHistory?.let { home += (it.formScore - 50) * 0.12 }
+        match.awayHistory?.let { away += (it.formScore - 50) * 0.12 }
+
+        var liveNote = "Oranlar: geçmiş form + hava arşivi + sakatlık + duygusal çöküş ile düzenlendi."
         if (match.status == MatchStatus.LIVE) {
             val scoreDelta = match.homeScore - match.awayScore
             val minuteFactor = match.minute / 90.0
@@ -81,8 +89,8 @@ object PredictionEngine {
         }
 
         val normalized = normalize(home, draw, away)
-
-        val weatherFactor = "Hava ${w.condition}, ${w.temperatureC}°C, rüzgar ${w.windKmh} km/s, yağış ${w.precipitationMm} mm. ${w.impactNote}"
+        val historyFactor = buildHistoryFactor(match)
+        val weatherFactor = "Bugün: ${w.condition}, ${w.temperatureC}°C, rüzgar ${w.windKmh} km/s, yağış ${w.precipitationMm} mm. ${w.impactNote}"
         val injuryFactor = buildInjuryNote(match)
         val emotionFactor = buildEmotionNote(match)
         val formFactor = buildFormNote(match, apiAdvice)
@@ -97,7 +105,52 @@ object PredictionEngine {
             emotionFactor = emotionFactor,
             formFactor = formFactor,
             liveFactor = liveNote,
-            summary = summary
+            summary = summary,
+            historyFactor = historyFactor
+        )
+    }
+
+    private fun historicalWeatherAdjust(match: Match, today: WeatherInfo): Triple<Double, Double, Double> {
+        val todayHard = today.precipitationMm >= 2.0 || today.windKmh >= 28.0 ||
+            today.temperatureC <= 2.0 || today.temperatureC >= 32.0
+        if (!todayHard) return Triple(0.0, 0.0, 0.0)
+
+        var homeAdj = 0.0
+        var awayAdj = 0.0
+        var drawAdj = 1.0
+
+        match.homeHistory?.let { h ->
+            if (h.wetConditionRecord.contains("zayıf", true) ||
+                h.weatherTrendNote.contains("zayıf", true)
+            ) {
+                homeAdj -= 4.0
+            } else if (h.weatherTrendNote.contains("dirençli", true)) {
+                homeAdj += 2.0
+            }
+        }
+        match.awayHistory?.let { a ->
+            if (a.weatherTrendNote.contains("zayıf", true)) {
+                awayAdj -= 4.5
+            } else if (a.weatherTrendNote.contains("dirençli", true)) {
+                awayAdj += 1.5
+            } else {
+                awayAdj -= 1.5 // deplasmanda zorlu hava ekstra
+            }
+        }
+        return Triple(homeAdj, awayAdj, drawAdj)
+    }
+
+    private fun collapseAdjust(
+        home: TeamHistoryProfile?,
+        away: TeamHistoryProfile?
+    ): Triple<Double, Double, Double> {
+        val h = (home?.collapseScore ?: 0) / 100.0
+        val a = (away?.collapseScore ?: 0) / 100.0
+        // Çöküş kendi kazanma şansını düşürür, rakibe avantaj verir
+        return Triple(
+            -h * 10.0 + a * 3.0,
+            -a * 10.0 + h * 3.0,
+            (h + a) * 2.0
         )
     }
 
@@ -156,6 +209,24 @@ object PredictionEngine {
         return (avg - 55) * 0.08
     }
 
+    private fun buildHistoryFactor(match: Match): String {
+        val h = match.homeHistory
+        val a = match.awayHistory
+        if (h == null && a == null) {
+            return "Geçmiş maç profili için maç detayını aç (son 5 maç + arşiv hava çekilir)."
+        }
+        val parts = mutableListOf<String>()
+        h?.let {
+            parts += "${it.teamName}: form ${it.formString} (${it.formScore}/100), " +
+                "çöküş ${it.collapseScore}/100 — ${it.collapseNote}. ${it.wetConditionRecord}."
+        }
+        a?.let {
+            parts += "${it.teamName}: form ${it.formString} (${it.formScore}/100), " +
+                "çöküş ${it.collapseScore}/100 — ${it.collapseNote}. ${it.wetConditionRecord}."
+        }
+        return parts.joinToString("\n")
+    }
+
     private fun buildInjuryNote(match: Match): String {
         val homeOut = match.homePlayers.filter { it.injuryLevel >= 2 }
         val awayOut = match.awayPlayers.filter { it.injuryLevel >= 2 }
@@ -169,22 +240,36 @@ object PredictionEngine {
         return if (parts.isEmpty()) {
             "API sakatlık listesinde kritik eksik yok (veya lig kapsamı dışında)."
         } else {
-            "Gerçek sakatlık/ceza (API-Football): " + parts.joinToString(" · ")
+            "Gerçek sakatlık/ceza: " + parts.joinToString(" · ")
         }
     }
 
     private fun buildEmotionNote(match: Match): String {
-        if (match.homePlayers.isEmpty() && match.awayPlayers.isEmpty()) {
-            return "Duygusal durum: form ve canlı skor baskısından türetildi."
+        val homeCollapse = match.homeHistory?.collapseScore
+        val awayCollapse = match.awayHistory?.collapseScore
+        val homeAvg = match.homePlayers.map { it.emotionScore }.average().takeIf { match.homePlayers.isNotEmpty() }
+            ?.roundToInt()
+            ?: (100 - (homeCollapse ?: 30))
+        val awayAvg = match.awayPlayers.map { it.emotionScore }.average().takeIf { match.awayPlayers.isNotEmpty() }
+            ?.roundToInt()
+            ?: (100 - (awayCollapse ?: 30))
+        val extra = buildString {
+            match.homeHistory?.let { append(" ${it.teamName}: ${it.collapseNote}.") }
+            match.awayHistory?.let { append(" ${it.teamName}: ${it.collapseNote}.") }
         }
-        val homeAvg = match.homePlayers.map { it.emotionScore }.average().roundToInt()
-        val awayAvg = match.awayPlayers.map { it.emotionScore }.average().roundToInt()
-        return "Moral (form + canlı skor): ${match.homeTeam} ${moodLabel(homeAvg)} ($homeAvg/100), " +
-            "${match.awayTeam} ${moodLabel(awayAvg)} ($awayAvg/100)."
+        return "Moral: ${match.homeTeam} ${moodLabel(homeAvg)} ($homeAvg/100), " +
+            "${match.awayTeam} ${moodLabel(awayAvg)} ($awayAvg/100).$extra"
     }
 
     private fun buildFormNote(match: Match, apiAdvice: String?): String {
-        val base = "Form skoru: ${match.homeTeam} ${match.homeForm}/100 · ${match.awayTeam} ${match.awayForm}/100"
+        val h = match.homeHistory
+        val a = match.awayHistory
+        val base = if (h != null || a != null) {
+            "Son maçlar: ${match.homeTeam} ${h?.formString ?: "?"} (${match.homeForm}/100) · " +
+                "${match.awayTeam} ${a?.formString ?: "?"} (${match.awayForm}/100)"
+        } else {
+            "Form skoru: ${match.homeTeam} ${match.homeForm}/100 · ${match.awayTeam} ${match.awayForm}/100"
+        }
         return if (!apiAdvice.isNullOrBlank()) "$base · API önerisi: $apiAdvice" else base
     }
 
@@ -202,8 +287,15 @@ object PredictionEngine {
             else -> "Beraberlik"
         }
         val adviceBit = if (!apiAdvice.isNullOrBlank()) " API: $apiAdvice." else ""
-        return "$favorite önde (%${maxOf(home, draw, away)}). " +
-            "Kaynak: ${match.dataSource}. Hava: ${weather.condition}.${adviceBit}"
+        val collapseBit = when {
+            (match.homeHistory?.collapseScore ?: 0) >= 50 ->
+                " ${match.homeTeam} duygusal çöküş baskısında."
+            (match.awayHistory?.collapseScore ?: 0) >= 50 ->
+                " ${match.awayTeam} duygusal çöküş baskısında."
+            else -> ""
+        }
+        return "Muro oranı: $favorite önde (%${maxOf(home, draw, away)}). " +
+            "Hava ${weather.condition.lowercase()}.$collapseBit$adviceBit"
     }
 
     private fun normalize(home: Double, draw: Double, away: Double): Triple<Int, Int, Int> {
@@ -233,23 +325,23 @@ object PredictionEngine {
         val notes = mutableListOf<String>()
         if (precip >= 5) {
             score -= 2.5
-            notes += "Şiddetli yağış top kontrolünü zorlaştırır, skorlar düşebilir"
+            notes += "Şiddetli yağış top kontrolünü zorlaştırır"
         } else if (precip >= 1) {
             score -= 1.0
-            notes += "Hafif yağış pas temposunu yavaşlatabilir"
+            notes += "Hafif yağış temposu yavaşlatabilir"
         }
         if (wind >= 30) {
             score -= 2.0
-            notes += "Kuvvetli rüzgar orta ve uzun pasları bozar"
+            notes += "Kuvvetli rüzgar pasları bozar"
         }
         if (temp <= 2) {
             score -= 1.5
-            notes += "Soğuk hava deplasman adaptasyonunu zorlar"
+            notes += "Soğuk hava deplasmanı zorlar"
         } else if (temp >= 32) {
             score -= 1.5
-            notes += "Sıcaklık temposu düşürür, sakatlık riski artar"
+            notes += "Sıcaklık temposu düşürür"
         }
-        if (notes.isEmpty()) notes += "Hava koşulları dengeli; oyun akışına nötr etki"
+        if (notes.isEmpty()) notes += "Hava nötr etki"
         return score to notes.joinToString(". ") + "."
     }
 
@@ -265,7 +357,7 @@ object PredictionEngine {
         score >= 65 -> "iyi moral"
         score >= 45 -> "dengeli"
         score >= 30 -> "düşük moral"
-        else -> "gergin / baskı altında"
+        else -> "duygusal çöküş riski"
     }
 
     private fun defaultWeather(city: String) = WeatherInfo(

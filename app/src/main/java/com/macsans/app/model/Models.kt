@@ -21,6 +21,23 @@ data class PlayerStatus(
     val note: String
 )
 
+/** Son maçların özeti: form, hava etkisi, duygusal çöküş */
+data class TeamHistoryProfile(
+    val teamName: String,
+    val formString: String,          // örn WWLDW
+    val formScore: Int,              // 0-100
+    val wins: Int,
+    val draws: Int,
+    val losses: Int,
+    val goalsFor: Int,
+    val goalsAgainst: Int,
+    val collapseScore: Int,          // 0-100 yüksek = duygusal çöküş
+    val collapseNote: String,
+    val weatherTrendNote: String,
+    val wetConditionRecord: String,  // yağışlı/zorlu havada skor
+    val recentLines: List<String>
+)
+
 data class WinBreakdown(
     val homeWinPercent: Int,
     val drawPercent: Int,
@@ -30,7 +47,8 @@ data class WinBreakdown(
     val emotionFactor: String,
     val formFactor: String,
     val liveFactor: String,
-    val summary: String
+    val summary: String,
+    val historyFactor: String = ""
 )
 
 enum class MatchStatus {
@@ -43,6 +61,8 @@ data class Match(
     val country: String,
     val homeTeam: String,
     val awayTeam: String,
+    val homeTeamId: Long = 0L,
+    val awayTeamId: Long = 0L,
     val kickoffLabel: String,
     val venue: String,
     val city: String,
@@ -59,5 +79,7 @@ data class Match(
     var weather: WeatherInfo? = null,
     var analysis: WinBreakdown? = null,
     val apiAdvice: String? = null,
-    val dataSource: String = "demo"
+    val dataSource: String = "demo",
+    val homeHistory: TeamHistoryProfile? = null,
+    val awayHistory: TeamHistoryProfile? = null
 )

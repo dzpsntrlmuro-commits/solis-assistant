@@ -3,6 +3,8 @@ package com.macsans.app.api
 import com.macsans.app.model.Match
 import com.macsans.app.model.MatchStatus
 import com.macsans.app.model.PlayerStatus
+import com.macsans.app.model.TeamHistoryProfile
+// HistoricalWeatherClient is in same package
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
@@ -12,6 +14,7 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 import java.util.concurrent.TimeUnit
+import kotlin.math.roundToInt
 
 /**
  * API-Football (api-sports.io) client.
@@ -121,6 +124,154 @@ class FootballApiClient(private val apiKey: String) {
         }
     }
 
+    data class PastFixture(
+        val date: String,
+        val homeName: String,
+        val awayName: String,
+        val homeGoals: Int,
+        val awayGoals: Int,
+        val isHome: Boolean,
+        val result: Char, // W D L from team perspective
+        val venueCity: String
+    )
+
+    fun fetchTeamLastFixtures(teamId: Long, last: Int = 5): List<PastFixture> {
+        if (apiKey.isBlank() || teamId <= 0L) return emptyList()
+        return try {
+            val json = getJson("https://v3.football.api-sports.io/fixtures?team=$teamId&last=$last")
+            val response = json.optJSONArray("response") ?: return emptyList()
+            val out = mutableListOf<PastFixture>()
+            for (i in 0 until response.length()) {
+                val obj = response.getJSONObject(i)
+                val fixture = obj.optJSONObject("fixture") ?: continue
+                val teams = obj.optJSONObject("teams") ?: continue
+                val goals = obj.optJSONObject("goals") ?: continue
+                val home = teams.optJSONObject("home") ?: continue
+                val away = teams.optJSONObject("away") ?: continue
+                val status = fixture.optJSONObject("status")?.optString("short").orEmpty()
+                if (status !in listOf("FT", "AET", "PEN")) continue
+                val homeId = home.optLong("id")
+                val isHome = homeId == teamId
+                val hg = goals.optInt("home", 0)
+                val ag = goals.optInt("away", 0)
+                val result = when {
+                    hg == ag -> 'D'
+                    isHome && hg > ag -> 'W'
+                    !isHome && ag > hg -> 'W'
+                    else -> 'L'
+                }
+                val dateIso = fixture.optString("date", "")
+                val date = if (dateIso.length >= 10) dateIso.substring(0, 10) else ""
+                val city = fixture.optJSONObject("venue")?.optString("city").orEmpty()
+                out += PastFixture(
+                    date = date,
+                    homeName = home.optString("name"),
+                    awayName = away.optString("name"),
+                    homeGoals = hg,
+                    awayGoals = ag,
+                    isHome = isHome,
+                    result = result,
+                    venueCity = city
+                )
+            }
+            out
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    fun buildHistoryProfile(
+        teamName: String,
+        past: List<PastFixture>,
+        weatherDays: List<HistoricalWeatherClient.DayWeather>
+    ): TeamHistoryProfile {
+        var w = 0; var d = 0; var l = 0
+        var gf = 0; var ga = 0
+        val form = StringBuilder()
+        val lines = mutableListOf<String>()
+        past.forEach { p ->
+            when (p.result) {
+                'W' -> w++
+                'D' -> d++
+                else -> l++
+            }
+            form.append(p.result)
+            if (p.isHome) {
+                gf += p.homeGoals; ga += p.awayGoals
+            } else {
+                gf += p.awayGoals; ga += p.homeGoals
+            }
+            lines += "${p.date}: ${p.homeName} ${p.homeGoals}-${p.awayGoals} ${p.awayName} (${p.result})"
+        }
+        val formScore = ((w * 3 + d).toDouble() / (past.size.coerceAtLeast(1) * 3) * 100).roundToInt()
+
+        // Emotional collapse: consecutive losses, heavy defeats, goal drought
+        var collapse = 0
+        var streakL = 0
+        for (p in past) {
+            if (p.result == 'L') streakL++ else break
+        }
+        collapse += streakL * 18
+        val heavyLosses = past.count {
+            val conceded = if (it.isHome) it.awayGoals - it.homeGoals else it.homeGoals - it.awayGoals
+            it.result == 'L' && conceded >= 2
+        }
+        collapse += heavyLosses * 12
+        if (gf == 0 && past.isNotEmpty()) collapse += 15
+        if (ga - gf >= 5) collapse += 10
+        collapse = collapse.coerceIn(0, 100)
+
+        val collapseNote = when {
+            collapse >= 70 -> "Yüksek duygusal çöküş: üst üste yenilgi / ağır skorlar baskısı"
+            collapse >= 40 -> "Orta düzey moral düşüşü: son maçlarda kırılganlık var"
+            collapse >= 20 -> "Hafif baskı: formda dalgalanma"
+            else -> "Moral görece stabil"
+        }
+
+        // Weather vs results on hard days
+        var hardPlayed = 0
+        var hardPoints = 0
+        past.forEachIndexed { idx, p ->
+            val day = weatherDays.getOrNull(idx) ?: return@forEachIndexed
+            if (day.hardCondition) {
+                hardPlayed++
+                hardPoints += when (p.result) {
+                    'W' -> 3
+                    'D' -> 1
+                    else -> 0
+                }
+            }
+        }
+        val wetRecord = if (hardPlayed == 0) {
+            "Zorlu hava geçmişi yok / veri yok"
+        } else {
+            "Zorlu havada $hardPlayed maç · $hardPoints puan (ort ${(hardPoints.toDouble() / hardPlayed).let { String.format(Locale.US, "%.1f", it) }})"
+        }
+        val weatherTrend = if (hardPlayed > 0 && hardPoints.toDouble() / hardPlayed < 1.0) {
+            "Geçmişte zorlu havada zayıf; bugünkü hava oranları düşürür"
+        } else if (hardPlayed > 0) {
+            "Zorlu havada dirençli; hava dezavantajı sınırlı"
+        } else {
+            "Geçmiş hava-maç korelasyonu sınırlı"
+        }
+
+        return TeamHistoryProfile(
+            teamName = teamName,
+            formString = form.toString(),
+            formScore = formScore.coerceIn(5, 99),
+            wins = w,
+            draws = d,
+            losses = l,
+            goalsFor = gf,
+            goalsAgainst = ga,
+            collapseScore = collapse,
+            collapseNote = collapseNote,
+            weatherTrendNote = weatherTrend,
+            wetConditionRecord = wetRecord,
+            recentLines = lines
+        )
+    }
+
     fun fetchPrediction(fixtureId: String): PredictionPercents? {
         if (apiKey.isBlank() || fixtureId.isBlank()) return null
         return try {
@@ -209,6 +360,8 @@ class FootballApiClient(private val apiKey: String) {
             country = league.optString("country", ""),
             homeTeam = home.optString("name", "Ev"),
             awayTeam = away.optString("name", "Deplasman"),
+            homeTeamId = home.optLong("id"),
+            awayTeamId = away.optLong("id"),
             kickoffLabel = kickoff,
             venue = venueName,
             city = city.ifBlank { league.optString("country", "Bilinmiyor") },
