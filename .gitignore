@@ -9,5 +9,6 @@
 .externalNativeBuild
 .cxx
 *.apk
+!releases/*.apk
 !docs/**
 build-output.txt
