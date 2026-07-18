@@ -56,12 +56,15 @@ class MainActivity : AppCompatActivity() {
         apiBanner = findViewById(R.id.txtApiBanner)
         slipInfo = findViewById(R.id.txtSlipInfo)
 
-        adapter = MatchAdapter { match ->
-            val intent = Intent(this, MatchDetailActivity::class.java)
-            intent.putExtra(MatchDetailActivity.EXTRA_MATCH_ID, match.id)
-            MatchDetailActivity.cache = MatchOddsCache.get(match.id) ?: match
-            startActivity(intent)
-        }
+        adapter = MatchAdapter(
+            onOpenDetail = { match ->
+                val intent = Intent(this, MatchDetailActivity::class.java)
+                intent.putExtra(MatchDetailActivity.EXTRA_MATCH_ID, match.id)
+                MatchDetailActivity.cache = MatchOddsCache.get(match.id) ?: match
+                startActivity(intent)
+            },
+            onPickChanged = { refreshSlipBar() }
+        )
         recycler.layoutManager = LinearLayoutManager(this)
         recycler.adapter = adapter
 
@@ -105,10 +108,12 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         updateBanner()
         refreshSlipBar()
-        // Detaydan dönünce sabitlenmiş oranları listeye yansıt
+        // Detaydan dönünce sabitlenmiş oranları listeye yansıt + seçimleri boya
         if (allMatches.isNotEmpty()) {
             allMatches = MatchOddsCache.mergeInto(allMatches)
             renderList()
+        } else {
+            adapter.refreshSelections()
         }
         if (ApiKeyStore.hasKey(this) && allMatches.isEmpty()) {
             loadMatches(showSpinner = true)

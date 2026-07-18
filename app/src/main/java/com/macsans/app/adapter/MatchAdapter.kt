@@ -8,18 +8,31 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.macsans.app.R
+import com.macsans.app.data.CouponStore
+import com.macsans.app.engine.PredictionEngine
+import com.macsans.app.model.CouponLeg
+import com.macsans.app.model.CouponPickType
 import com.macsans.app.model.Match
 import com.macsans.app.model.MatchStatus
 
 class MatchAdapter(
-    private val onClick: (Match) -> Unit
+    private val onOpenDetail: (Match) -> Unit,
+    private val onPickChanged: () -> Unit
 ) : RecyclerView.Adapter<MatchAdapter.Holder>() {
 
     private val items = mutableListOf<Match>()
+    private val selected = mutableMapOf<String, CouponPickType>()
 
     fun submit(list: List<Match>) {
         items.clear()
         items.addAll(list)
+        // Slip'teki seçimleri yeniden yükle
+        selected.clear()
+        // Context adapter'da yok; bind sırasında CouponStore'dan okunacak
+        notifyDataSetChanged()
+    }
+
+    fun refreshSelections() {
         notifyDataSetChanged()
     }
 
@@ -45,9 +58,18 @@ class MatchAdapter(
         private val homeBar: ProgressBar = itemView.findViewById(R.id.barHome)
         private val drawBar: ProgressBar = itemView.findViewById(R.id.barDraw)
         private val awayBar: ProgressBar = itemView.findViewById(R.id.barAway)
+        private val btnHome: TextView = itemView.findViewById(R.id.btnPickHome)
+        private val btnDraw: TextView = itemView.findViewById(R.id.btnPickDraw)
+        private val btnAway: TextView = itemView.findViewById(R.id.btnPickAway)
+        private val pickState: TextView = itemView.findViewById(R.id.txtPickState)
+        private val openDetail: TextView = itemView.findViewById(R.id.btnOpenDetail)
 
         fun bind(match: Match) {
-            val analysis = match.analysis
+            val ctx = itemView.context
+            val analysis = match.analysis ?: PredictionEngine.analyze(match, match.weather)
+            val slipPick = CouponStore.loadSlip(ctx)
+                .firstOrNull { it.matchId == match.id }?.pick
+
             league.text = "${match.country} · ${match.league}"
             teams.text = "${match.homeTeam}  vs  ${match.awayTeam}"
             when (match.status) {
@@ -75,24 +97,100 @@ class MatchAdapter(
                 "${match.city} · hava yükleniyor"
             }
 
-            if (analysis != null) {
-                val detailed = match.homeHistory != null || match.dataSource.contains("geçmiş", true)
-                winLine.text =
-                    (if (detailed) "Detaylı oran: " else "Hızlı oran: ") +
-                        "${match.homeTeam} %${analysis.homeWinPercent} · Ber. %${analysis.drawPercent} · ${match.awayTeam} %${analysis.awayWinPercent}"
-                summary.text = analysis.summary
-                homeBar.progress = analysis.homeWinPercent
-                drawBar.progress = analysis.drawPercent
-                awayBar.progress = analysis.awayWinPercent
+            val detailed = match.homeHistory != null || match.dataSource.contains("geçmiş", true)
+            winLine.text =
+                (if (detailed) "Detaylı oran: " else "Hızlı oran: ") +
+                    "${match.homeTeam} %${analysis.homeWinPercent} · Ber. %${analysis.drawPercent} · ${match.awayTeam} %${analysis.awayWinPercent}"
+            summary.text = analysis.summary
+            homeBar.progress = analysis.homeWinPercent
+            drawBar.progress = analysis.drawPercent
+            awayBar.progress = analysis.awayWinPercent
+
+            btnHome.text = "1\n%${analysis.homeWinPercent}"
+            btnDraw.text = "X\n%${analysis.drawPercent}"
+            btnAway.text = "2\n%${analysis.awayWinPercent}"
+
+            stylePicks(slipPick)
+
+            if (slipPick != null) {
+                val pct = when (slipPick) {
+                    CouponPickType.HOME -> analysis.homeWinPercent
+                    CouponPickType.DRAW -> analysis.drawPercent
+                    CouponPickType.AWAY -> analysis.awayWinPercent
+                }
+                val label = when (slipPick) {
+                    CouponPickType.HOME -> "1 Ev"
+                    CouponPickType.DRAW -> "X Beraberlik"
+                    CouponPickType.AWAY -> "2 Deplasman"
+                }
+                pickState.text = "✓ Seçildi: $label · %$pct · ${CouponStore.confidenceLabel(pct)}"
+                pickState.setTextColor(Color.parseColor("#A5D6A7"))
             } else {
-                winLine.text = "Analiz hazırlanıyor…"
-                summary.text = ""
-                homeBar.progress = 0
-                drawBar.progress = 0
-                awayBar.progress = 0
+                pickState.text = "Seçim yok — 1 / X / 2 kutucuğuna dokun"
+                pickState.setTextColor(Color.parseColor("#A7C4B5"))
             }
 
-            itemView.setOnClickListener { onClick(match) }
+            btnHome.setOnClickListener { togglePick(match, CouponPickType.HOME) }
+            btnDraw.setOnClickListener { togglePick(match, CouponPickType.DRAW) }
+            btnAway.setOnClickListener { togglePick(match, CouponPickType.AWAY) }
+            openDetail.setOnClickListener { onOpenDetail(match) }
+            // Satıra basınca da detay; kutucuklar kendi tıklamasını yer
+            itemView.setOnClickListener { onOpenDetail(match) }
+        }
+
+        private fun stylePicks(selectedPick: CouponPickType?) {
+            btnHome.setBackgroundResource(
+                if (selectedPick == CouponPickType.HOME) R.drawable.bg_pick_home_on else R.drawable.bg_pick_idle
+            )
+            btnDraw.setBackgroundResource(
+                if (selectedPick == CouponPickType.DRAW) R.drawable.bg_pick_draw_on else R.drawable.bg_pick_idle
+            )
+            btnAway.setBackgroundResource(
+                if (selectedPick == CouponPickType.AWAY) R.drawable.bg_pick_away_on else R.drawable.bg_pick_idle
+            )
+            btnHome.setTextColor(
+                if (selectedPick == CouponPickType.HOME) Color.WHITE else Color.parseColor("#E8F5E9")
+            )
+            btnDraw.setTextColor(
+                if (selectedPick == CouponPickType.DRAW) Color.parseColor("#1B1B1B") else Color.parseColor("#E8F5E9")
+            )
+            btnAway.setTextColor(
+                if (selectedPick == CouponPickType.AWAY) Color.WHITE else Color.parseColor("#E8F5E9")
+            )
+        }
+
+        private fun togglePick(match: Match, pick: CouponPickType) {
+            val ctx = itemView.context
+            val current = CouponStore.loadSlip(ctx).firstOrNull { it.matchId == match.id }?.pick
+            if (current == pick) {
+                // Aynı kutuya tekrar basınca seçimi kaldır
+                CouponStore.removeSlipLeg(ctx, match.id)
+            } else {
+                val analysis = match.analysis ?: PredictionEngine.analyze(match, match.weather)
+                val percent = when (pick) {
+                    CouponPickType.HOME -> analysis.homeWinPercent
+                    CouponPickType.DRAW -> analysis.drawPercent
+                    CouponPickType.AWAY -> analysis.awayWinPercent
+                }
+                CouponStore.addOrReplaceSlipLeg(
+                    ctx,
+                    CouponLeg(
+                        matchId = match.id,
+                        homeTeam = match.homeTeam,
+                        awayTeam = match.awayTeam,
+                        league = "${match.country} · ${match.league}",
+                        kickoffLabel = match.kickoffLabel,
+                        pick = pick,
+                        predictedPercent = percent,
+                        confidenceLabel = CouponStore.confidenceLabel(percent),
+                        homeWinPercent = analysis.homeWinPercent,
+                        drawPercent = analysis.drawPercent,
+                        awayWinPercent = analysis.awayWinPercent
+                    )
+                )
+            }
+            notifyItemChanged(bindingAdapterPosition)
+            onPickChanged()
         }
     }
 }
