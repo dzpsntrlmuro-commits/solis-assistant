@@ -49,8 +49,7 @@ object FaceFingerprintExtractor {
             (nX - eyeMidX) / eyeDist,
             (nY - eyeMidY) / eyeDist,
             abs(leY - reY) / eyeDist,
-            abs(nX - eyeMidX) / eyeDist,
-            faceHeight
+            abs(nX - eyeMidX) / eyeDist
         )
 
         if (mouthLeft != null && mouthRight != null && mouthBottom != null) {
@@ -84,6 +83,8 @@ object FaceFingerprintExtractor {
         } else {
             repeat(5) { features.add(0f) }
         }
+
+        features.add(faceHeight)
 
         if (features.any { it.isNaN() || it.isInfinite() }) return null
         return FaceFingerprint(features.toFloatArray())
