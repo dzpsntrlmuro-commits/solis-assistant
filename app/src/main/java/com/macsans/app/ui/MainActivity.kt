@@ -40,7 +40,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var adapter: MatchAdapter
 
     private var allMatches: List<Match> = emptyList()
-    private var filter: Filter = Filter.ALL
+    private var filter: Filter = Filter.UPCOMING
     private var liveJob: Job? = null
 
     enum class Filter { ALL, LIVE, UPCOMING, FINISHED }
@@ -85,7 +85,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.btnSaveSlip).setOnClickListener {
             val coupon = CouponStore.createCouponFromSlip(this)
             if (coupon == null) {
-                Toast.makeText(this, "Kupon boş — maç detayından 1/X/2 seç", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Kupon boş — Olmamış sekmesinde 1/X/2 seç", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(
                     this,
@@ -128,7 +128,7 @@ class MainActivity : AppCompatActivity() {
     private fun refreshSlipBar() {
         val slip = CouponStore.loadSlip(this)
         slipInfo.text = if (slip.isEmpty()) {
-            "Kupon boş · maça gir → 1/X/2 seç"
+            "Kupon boş · Olmamış maçlarda 1/X/2 kutusu seç"
         } else {
             var p = 1.0
             slip.forEach { leg -> p *= leg.predictedPercent.coerceIn(1, 99) / 100.0 }
@@ -185,7 +185,7 @@ class MainActivity : AppCompatActivity() {
             !ApiKeyStore.hasKey(this) ->
                 "Gerçek sonuçlar için Ayarlar’dan API-Football anahtarı gir."
             filter == Filter.LIVE -> "Şu an canlı maç yok."
-            filter == Filter.UPCOMING -> "Bugün bekleyen maç kalmadı."
+            filter == Filter.UPCOMING -> "Şu an olmamış (başlamamış) maç yok. Tümü veya Canlı’ya bak."
             filter == Filter.FINISHED -> "Henüz biten maç yok."
             else -> "Bugün için maç gelmedi veya API limiti doldu."
         }

@@ -47,8 +47,8 @@ object MatchRepository {
             return LoadResult(emptyList(), result.sourceNote, result.error, true)
         }
 
-        // Free plan: listeyi öncelikli liglerle sınırla (hava için istek patlamasın)
-        val prioritized = prioritize(result.matches).take(48)
+        // Free plan limiti: olmamış maçlara yer ayır (kupon seçimi için kritik)
+        val prioritized = balanceForCoupon(result.matches)
 
         val injuriesByTeam = try {
             api.fetchInjuriesForDate()
@@ -125,21 +125,32 @@ object MatchRepository {
         return detailed
     }
 
-    private fun prioritize(matches: List<Match>): List<Match> {
-        return matches.sortedWith(
-            compareBy<Match> {
-                when (it.status) {
-                    MatchStatus.LIVE -> 0
-                    MatchStatus.UPCOMING -> 1
-                    MatchStatus.FINISHED -> 2
-                }
-            }.thenBy { m ->
-                if (priorityCountries.any { c ->
-                        m.country.equals(c, true) || m.country.contains(c, true)
-                    }
-                ) 0 else 1
-            }.thenBy { it.kickoffLabel }
-        )
+    private fun countryRank(m: Match): Int {
+        return if (priorityCountries.any { c ->
+                m.country.equals(c, true) || m.country.contains(c, true)
+            }
+        ) 0 else 1
+    }
+
+    /** Olmamış maçları öne al; canlı/biten ile dengeli kota. */
+    private fun balanceForCoupon(matches: List<Match>): List<Match> {
+        val upcoming = matches.filter { it.status == MatchStatus.UPCOMING }
+            .sortedWith(compareBy({ countryRank(it) }, { it.kickoffLabel }))
+        val live = matches.filter { it.status == MatchStatus.LIVE }
+            .sortedWith(compareBy({ countryRank(it) }, { it.kickoffLabel }))
+        val finished = matches.filter { it.status == MatchStatus.FINISHED }
+            .sortedWith(compareBy({ countryRank(it) }, { it.kickoffLabel }))
+
+        val out = mutableListOf<Match>()
+        out += upcoming.take(30)
+        out += live.take(18)
+        out += finished.take(10)
+        // Kota dolmadıysa kalanlardan doldur
+        if (out.size < 50) {
+            val used = out.map { it.id }.toSet()
+            out += (upcoming + live + finished).filter { it.id !in used }.take(50 - out.size)
+        }
+        return out.distinctBy { it.id }
     }
 
     private fun enrichMatch(
