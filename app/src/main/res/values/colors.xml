@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="mystic_deep">#1A0A2E</color>
-    <color name="mystic_mid">#3D1F6E</color>
-    <color name="mystic_light">#7B4FBF</color>
-    <color name="night">#0D0618</color>
-    <color name="panel">#1E1035</color>
-    <color name="panel_soft">#2A1848</color>
-    <color name="cream_text">#F3E8FF</color>
-    <color name="muted_text">#B8A0D4</color>
-    <color name="accent_gold">#E8C547</color>
-    <color name="accent_rose">#E85D8A</color>
-    <color name="white">#FFFFFF</color>
-    <color name="scan_ring">#9B6FD4</color>
+    <color name="ink">#14181F</color>
+    <color name="ink_soft">#2A3140</color>
+    <color name="muted">#5C6578</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="bg">#EEF1F6</color>
+    <color name="bg_deep">#E2E7F0</color>
+    <color name="accent">#D61F3A</color>
+    <color name="accent_dark">#A8162C</color>
+    <color name="accent_soft">#FFE4E8</color>
+    <color name="outline">#CDD4E0</color>
+    <color name="player_bg">#0B0D12</color>
+    <color name="on_accent">#FFFFFF</color>
+    <color name="ic_launcher_background">#D61F3A</color>
 </resources>

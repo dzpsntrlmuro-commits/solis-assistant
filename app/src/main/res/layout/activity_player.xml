@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/player_bg">
+
+    <androidx.media3.ui.PlayerView
+        android:id="@+id/playerView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toTopOf="@id/infoPanel"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:show_buffering="when_playing"
+        app:use_controller="true" />
+
+    <ProgressBar
+        android:id="@+id/streamLoading"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:indeterminateTint="@color/accent"
+        app:layout_constraintBottom_toBottomOf="@id/playerView"
+        app:layout_constraintEnd_toEndOf="@id/playerView"
+        app:layout_constraintStart_toStartOf="@id/playerView"
+        app:layout_constraintTop_toTopOf="@id/playerView" />
+
+    <ImageButton
+        android:id="@+id/backButton"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_margin="12dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/back"
+        android:padding="10dp"
+        android:src="@drawable/ic_back"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="@android:color/white" />
+
+    <LinearLayout
+        android:id="@+id/infoPanel"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="18dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_badge"
+            android:fontFamily="sans-serif-medium"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="4dp"
+            android:text="@string/ad_free_badge"
+            android:textColor="@color/accent"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/playerTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:fontFamily="sans-serif-medium"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            tools:text="Video başlığı" />
+
+        <TextView
+            android:id="@+id/playerMeta"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:textColor="#AAB0BC"
+            android:textSize="13sp"
+            tools:text="Kanal" />
+
+        <TextView
+            android:id="@+id/playerError"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:textColor="#FFB4B4"
+            android:textSize="14sp"
+            android:visibility="gone"
+            tools:text="Hata"
+            tools:visibility="visible" />
+    </LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
