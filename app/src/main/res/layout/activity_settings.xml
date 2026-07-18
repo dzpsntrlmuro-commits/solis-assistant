@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_main"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            android:id="@+id/btnBackSettings"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:text="@string/back"
+            android:textColor="@color/accent_amber"
+            android:textSize="14sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="API anahtarı"
+            android:textColor="@color/cream_text"
+            android:textSize="26sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:lineSpacingExtra="3dp"
+            android:text="Gerçek maç / skor / sakatlık için API-Football (api-sports) ücretsiz anahtarı gerekir.\n\n1) dashboard.api-football.com hesabı aç\n2) Free plan seç (kart gerekmez)\n3) API key’i kopyala, buraya yapıştır\n4) Kaydet / Test et"
+            android:textColor="@color/muted_text"
+            android:textSize="13sp" />
+
+        <EditText
+            android:id="@+id/inputApiKey"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_match_row"
+            android:hint="x-apisports-key değerin"
+            android:inputType="textVisiblePassword"
+            android:padding="14dp"
+            android:textColor="@color/cream_text"
+            android:textColorHint="@color/muted_text"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/txtKeyStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:textColor="@color/accent_amber"
+            android:textSize="13sp" />
+
+        <Button
+            android:id="@+id/btnSaveKey"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:backgroundTint="@color/pitch_mid"
+            android:text="Kaydet / Test et"
+            android:textAllCaps="false"
+            android:textColor="@color/white" />
+
+        <Button
+            android:id="@+id/btnOpenDashboard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="@color/panel_soft"
+            android:text="API paneli aç"
+            android:textAllCaps="false"
+            android:textColor="@color/cream_text" />
+
+        <Button
+            android:id="@+id/btnClearKey"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="#4E342E"
+            android:text="Anahtarı sil"
+            android:textAllCaps="false"
+            android:textColor="@color/white" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="Not: Free planda günde ~100 istek vardır. Uygulama günlük fikstür + sakatlık için az istek kullanır; maç detayında gerçek prediction oranını ayrıca çeker."
+            android:textColor="@color/muted_text"
+            android:textSize="12sp" />
+    </LinearLayout>
+</ScrollView>

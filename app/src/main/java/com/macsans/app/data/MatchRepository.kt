@@ -1,32 +1,228 @@
 package com.macsans.app.data
 
+import android.content.Context
+import com.macsans.app.api.FootballApiClient
+import com.macsans.app.api.GeocodingClient
 import com.macsans.app.api.WeatherClient
 import com.macsans.app.engine.PredictionEngine
 import com.macsans.app.model.Match
 import com.macsans.app.model.MatchStatus
 import com.macsans.app.model.PlayerStatus
-import java.util.Calendar
-import java.util.Locale
+import com.macsans.app.model.WinBreakdown
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import kotlin.math.abs
-
 object MatchRepository {
 
-    fun loadDailyMatches(): List<Match> {
-        val seed = daySeed()
-        val fixtures = seedFixtures(seed)
-        val pool = Executors.newFixedThreadPool(6)
-        val futures = fixtures.map { match ->
+    data class LoadResult(
+        val matches: List<Match>,
+        val sourceNote: String,
+        val error: String? = null,
+        val usingRealApi: Boolean
+    )
+
+    fun loadDailyMatches(context: Context): LoadResult {
+        val key = ApiKeyStore.get(context)
+        if (key.isBlank()) {
+            return LoadResult(
+                matches = emptyList(),
+                sourceNote = "API anahtarı gerekli",
+                error = "Gerçek sonuçlar için API-Football anahtarı gir. Ücretsiz: dashboard.api-football.com",
+                usingRealApi = false
+            )
+        }
+
+        val api = FootballApiClient(key)
+        val result = api.fetchTodayFixtures()
+        if (result.error != null && result.matches.isEmpty()) {
+            return LoadResult(emptyList(), result.sourceNote, result.error, true)
+        }
+
+        // One extra call for today's injuries (real absences)
+        val injuriesByTeam = try {
+            api.fetchInjuriesForDate()
+        } catch (_: Exception) {
+            emptyMap()
+        }
+
+        val pool = Executors.newFixedThreadPool(4)
+        val futures = result.matches.map { match ->
             pool.submit<Match> {
-                val weather = WeatherClient.fetch(match.city, match.lat, match.lon)
-                val analyzed = match.copy(weather = weather)
-                analyzed.copy(analysis = PredictionEngine.analyze(analyzed, weather))
+                enrichMatch(match, injuriesByTeam, fetchPrediction = false, api = null)
             }
         }
-        val base = futures.map { it.get(20, TimeUnit.SECONDS) }
-        pool.shutdown()
-        return base.sortedWith(
+        val enriched = try {
+            futures.map { it.get(25, TimeUnit.SECONDS) }
+        } finally {
+            pool.shutdown()
+        }
+
+        return LoadResult(
+            matches = sortMatches(enriched),
+            sourceNote = result.sourceNote + if (injuriesByTeam.isNotEmpty()) " · sakatlık verisi dahil" else "",
+            error = result.error,
+            usingRealApi = true
+        )
+    }
+
+    fun refreshLive(context: Context, current: List<Match>): List<Match> {
+        val key = ApiKeyStore.get(context)
+        if (key.isBlank()) return current
+        val api = FootballApiClient(key)
+        val liveResult = api.fetchLiveFixtures()
+        if (liveResult.matches.isEmpty() && liveResult.error != null) return current
+
+        val liveById = liveResult.matches.associateBy { it.id }
+        return current.map { match ->
+            val live = liveById[match.id]
+            val updated = if (live != null) {
+                match.copy(
+                    status = live.status,
+                    minute = live.minute,
+                    homeScore = live.homeScore,
+                    awayScore = live.awayScore
+                )
+            } else if (match.status == MatchStatus.LIVE) {
+                // Was live, not in live feed anymore — re-check via keeping scores, mark finished lightly
+                match.copy(status = MatchStatus.FINISHED, minute = 90)
+            } else {
+                match
+            }
+            updated.copy(
+                analysis = PredictionEngine.analyze(
+                    updated,
+                    updated.weather,
+                    apiPercents = extractApiPercents(updated.analysis),
+                    apiAdvice = updated.apiAdvice
+                )
+            )
+        }.let { sortMatches(it) }
+    }
+
+    fun loadMatchDetail(context: Context, match: Match): Match {
+        val key = ApiKeyStore.get(context)
+        if (key.isBlank()) return match
+        val api = FootballApiClient(key)
+        val prediction = api.fetchPrediction(match.id)
+        val injuries = api.fetchInjuriesForDate()
+        return enrichMatch(match, injuries, fetchPrediction = true, api = api, prediction = prediction)
+    }
+
+    private fun enrichMatch(
+        match: Match,
+        injuriesByTeam: Map<String, List<PlayerStatus>>,
+        fetchPrediction: Boolean,
+        api: FootballApiClient?,
+        prediction: FootballApiClient.PredictionPercents? = null
+    ): Match {
+        val coords = if (match.lat == 0.0 && match.lon == 0.0 && match.city.isNotBlank()) {
+            GeocodingClient.lookup(match.city, match.country)
+        } else {
+            match.lat to match.lon
+        }
+        val weather = if (coords.first != 0.0 || coords.second != 0.0) {
+            WeatherClient.fetch(match.city, coords.first, coords.second)
+        } else {
+            null
+        }
+
+        val homeInj = injuriesByTeam[match.homeTeam].orEmpty()
+        val awayInj = injuriesByTeam[match.awayTeam].orEmpty()
+
+        val pred = prediction ?: if (fetchPrediction && api != null) api.fetchPrediction(match.id) else null
+        val homeForm = pred?.homeForm?.let { formToScore(it) } ?: match.homeForm
+        val awayForm = pred?.awayForm?.let { formToScore(it) } ?: match.awayForm
+
+        // Emotional state approximated from form + injury burden + live score pressure
+        val homePlayers = if (homeInj.isNotEmpty()) {
+            homeInj.map { it.copy(emotionScore = emotionFromForm(homeForm, match, home = true)) }
+        } else {
+            listOf(
+                PlayerStatus(
+                    name = "${match.homeTeam} kadro",
+                    team = match.homeTeam,
+                    role = "Takım",
+                    injuryLevel = 0,
+                    emotionScore = emotionFromForm(homeForm, match, home = true),
+                    fitnessPercent = homeForm.coerceIn(40, 95),
+                    note = "Kritik sakatlık raporu yok / API’de listelenmedi"
+                )
+            )
+        }
+        val awayPlayers = if (awayInj.isNotEmpty()) {
+            awayInj.map { it.copy(emotionScore = emotionFromForm(awayForm, match, home = false)) }
+        } else {
+            listOf(
+                PlayerStatus(
+                    name = "${match.awayTeam} kadro",
+                    team = match.awayTeam,
+                    role = "Takım",
+                    injuryLevel = 0,
+                    emotionScore = emotionFromForm(awayForm, match, home = false),
+                    fitnessPercent = awayForm.coerceIn(40, 95),
+                    note = "Kritik sakatlık raporu yok / API’de listelenmedi"
+                )
+            )
+        }
+
+        val withData = match.copy(
+            lat = coords.first,
+            lon = coords.second,
+            weather = weather,
+            homeForm = homeForm,
+            awayForm = awayForm,
+            homePlayers = homePlayers,
+            awayPlayers = awayPlayers,
+            apiAdvice = pred?.advice ?: match.apiAdvice,
+            dataSource = "API-Football"
+        )
+
+        val apiPercents = pred?.let { Triple(it.home, it.draw, it.away) }
+        val analysis = PredictionEngine.analyze(
+            withData,
+            weather,
+            apiPercents = apiPercents,
+            apiAdvice = withData.apiAdvice
+        )
+        return withData.copy(analysis = analysis)
+    }
+
+    private fun emotionFromForm(form: Int, match: Match, home: Boolean): Int {
+        var score = form.coerceIn(25, 95)
+        if (match.status == MatchStatus.LIVE) {
+            val delta = match.homeScore - match.awayScore
+            score += when {
+                home && delta > 0 -> 8
+                home && delta < 0 -> -10
+                !home && delta < 0 -> 8
+                !home && delta > 0 -> -10
+                else -> 0
+            }
+        }
+        return score.coerceIn(15, 98)
+    }
+
+    private fun formToScore(raw: String): Int {
+        // API may return "65" percent or "WWDLW"
+        raw.replace("%", "").trim().toIntOrNull()?.let { return it.coerceIn(1, 99) }
+        if (raw.isBlank()) return 60
+        var pts = 50
+        raw.uppercase().forEach { c ->
+            when (c) {
+                'W' -> pts += 8
+                'D' -> pts += 2
+                'L' -> pts -= 8
+            }
+        }
+        return pts.coerceIn(20, 95)
+    }
+
+    private fun extractApiPercents(analysis: WinBreakdown?): Triple<Int, Int, Int>? {
+        if (analysis == null) return null
+        return Triple(analysis.homeWinPercent, analysis.drawPercent, analysis.awayWinPercent)
+    }
+
+    private fun sortMatches(list: List<Match>): List<Match> {
+        return list.sortedWith(
             compareBy<Match> {
                 when (it.status) {
                     MatchStatus.LIVE -> 0
@@ -36,131 +232,4 @@ object MatchRepository {
             }.thenBy { it.kickoffLabel }
         )
     }
-
-    fun refreshLive(matches: List<Match>): List<Match> {
-        return matches.map { match ->
-            if (match.status != MatchStatus.LIVE) return@map match
-            val advancedMinute = (match.minute + (2..4).random()).coerceAtMost(90)
-            var homeScore = match.homeScore
-            var awayScore = match.awayScore
-            if ((1..10).random() <= 2) {
-                if ((0..1).random() == 0) homeScore++ else awayScore++
-            }
-            val updated = match.copy(
-                minute = advancedMinute,
-                homeScore = homeScore,
-                awayScore = awayScore,
-                status = if (advancedMinute >= 90) MatchStatus.FINISHED else MatchStatus.LIVE
-            )
-            updated.copy(analysis = PredictionEngine.analyze(updated, updated.weather))
-        }
-    }
-
-    private fun daySeed(): Int {
-        val c = Calendar.getInstance()
-        return c.get(Calendar.YEAR) * 1000 + c.get(Calendar.DAY_OF_YEAR)
-    }
-
-    private fun seedFixtures(seed: Int): List<Match> {
-        val templates = listOf(
-            Template("Süper Lig", "Türkiye", "Galatasaray", "Fenerbahçe", "RAMS Park", "İstanbul", 41.103, 28.990, 78, 76),
-            Template("Süper Lig", "Türkiye", "Beşiktaş", "Trabzonspor", "Tüpraş Stadyumu", "İstanbul", 41.039, 28.994, 72, 70),
-            Template("Premier League", "İngiltere", "Arsenal", "Liverpool", "Emirates", "Londra", 51.555, -0.108, 80, 82),
-            Template("Premier League", "İngiltere", "Man City", "Chelsea", "Etihad", "Manchester", 53.483, -2.200, 84, 74),
-            Template("La Liga", "İspanya", "Real Madrid", "Barcelona", "Santiago Bernabéu", "Madrid", 40.453, -3.688, 85, 83),
-            Template("La Liga", "İspanya", "Atlético", "Sevilla", "Cívitas Metropolitano", "Madrid", 40.436, -3.599, 75, 68),
-            Template("Serie A", "İtalya", "Inter", "Milan", "San Siro", "Milano", 45.478, 9.124, 81, 77),
-            Template("Serie A", "İtalya", "Juventus", "Napoli", "Allianz Stadium", "Torino", 45.109, 7.641, 76, 79),
-            Template("Bundesliga", "Almanya", "Bayern", "Dortmund", "Allianz Arena", "Münih", 48.218, 11.624, 86, 78),
-            Template("Bundesliga", "Almanya", "Leipzig", "Leverkusen", "Red Bull Arena", "Leipzig", 51.345, 12.348, 73, 80),
-            Template("Ligue 1", "Fransa", "PSG", "Marseille", "Parc des Princes", "Paris", 48.841, 2.253, 84, 71),
-            Template("Eredivisie", "Hollanda", "Ajax", "PSV", "Johan Cruijff Arena", "Amsterdam", 52.314, 4.941, 74, 77),
-            Template("MLS", "ABD", "Inter Miami", "LAFC", "Chase Stadium", "Miami", 25.957, -80.238, 70, 72),
-            Template("Brasileirão", "Brezilya", "Flamengo", "Palmeiras", "Maracanã", "Rio de Janeiro", -22.912, -43.230, 79, 78),
-            Template("Saudi Pro League", "Suudi Arabistan", "Al Hilal", "Al Nassr", "Kingdom Arena", "Riyad", 24.743, 46.622, 82, 80),
-            Template("J1 League", "Japonya", "Urawa", "Kashima", "Saitama Stadium", "Saitama", 35.903, 139.717, 68, 69)
-        )
-
-        return templates.mapIndexed { index, t ->
-            val roll = abs(seed * 31 + index * 17) % 100
-            val status = when {
-                roll < 28 -> MatchStatus.LIVE
-                roll < 55 -> MatchStatus.FINISHED
-                else -> MatchStatus.UPCOMING
-            }
-            val minute = when (status) {
-                MatchStatus.LIVE -> 12 + (abs(seed + index * 9) % 75)
-                MatchStatus.FINISHED -> 90
-                MatchStatus.UPCOMING -> 0
-            }
-            val homeScore = if (status == MatchStatus.UPCOMING) 0 else abs(seed + index) % 4
-            val awayScore = if (status == MatchStatus.UPCOMING) 0 else abs(seed * 3 + index * 5) % 3
-            val hour = 14 + (index % 8)
-            val minuteLabel = listOf("00", "15", "30", "45")[index % 4]
-            Match(
-                id = "m-$seed-$index",
-                league = t.league,
-                country = t.country,
-                homeTeam = t.home,
-                awayTeam = t.away,
-                kickoffLabel = String.format(Locale.US, "%02d:%s", hour, minuteLabel),
-                venue = t.venue,
-                city = t.city,
-                lat = t.lat,
-                lon = t.lon,
-                status = status,
-                minute = minute,
-                homeScore = homeScore,
-                awayScore = awayScore,
-                homeForm = t.homeForm + ((seed + index) % 7) - 3,
-                awayForm = t.awayForm + ((seed * 2 + index) % 7) - 3,
-                homePlayers = playersFor(t.home, seed + index),
-                awayPlayers = playersFor(t.away, seed + index * 3)
-            )
-        }
-    }
-
-    private fun playersFor(team: String, seed: Int): List<PlayerStatus> {
-        val names = listOf(
-            "Kaptan", "10 Numara", "Santrafor", "Stoper", "Kanat"
-        )
-        return names.mapIndexed { i, roleName ->
-            val injury = abs(seed * (i + 2)) % 11
-            val injuryLevel = when {
-                injury == 0 -> 3
-                injury <= 2 -> 2
-                injury <= 4 -> 1
-                else -> 0
-            }
-            val emotion = 35 + abs(seed * (i + 5)) % 55
-            val fitness = 55 + abs(seed * (i + 7)) % 40
-            PlayerStatus(
-                name = "$team $roleName",
-                team = team,
-                role = roleName,
-                injuryLevel = injuryLevel,
-                emotionScore = emotion,
-                fitnessPercent = fitness,
-                note = when (injuryLevel) {
-                    3 -> "Maç kadrosunda yok"
-                    2 -> "Antrenmanda kısıtlı çalıştı"
-                    1 -> "Hafif kas rahatsızlığı"
-                    else -> if (emotion >= 75) "Yüksek motivasyon" else "Stabil performans beklentisi"
-                }
-            )
-        }
-    }
-
-    private data class Template(
-        val league: String,
-        val country: String,
-        val home: String,
-        val away: String,
-        val venue: String,
-        val city: String,
-        val lat: Double,
-        val lon: Double,
-        val homeForm: Int,
-        val awayForm: Int
-    )
 }

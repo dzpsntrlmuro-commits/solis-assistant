@@ -10,9 +10,9 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.chip.Chip
-import com.google.android.material.chip.ChipGroup
 import com.macsans.app.R
 import com.macsans.app.adapter.MatchAdapter
+import com.macsans.app.data.ApiKeyStore
 import com.macsans.app.data.MatchRepository
 import com.macsans.app.model.Match
 import com.macsans.app.model.MatchStatus
@@ -32,7 +32,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var swipe: SwipeRefreshLayout
     private lateinit var emptyView: TextView
     private lateinit var headerMeta: TextView
-    private lateinit var chipGroup: ChipGroup
+    private lateinit var apiBanner: TextView
     private lateinit var adapter: MatchAdapter
 
     private var allMatches: List<Match> = emptyList()
@@ -49,7 +49,7 @@ class MainActivity : AppCompatActivity() {
         swipe = findViewById(R.id.swipeRefresh)
         emptyView = findViewById(R.id.txtEmpty)
         headerMeta = findViewById(R.id.txtHeaderMeta)
-        chipGroup = findViewById(R.id.chipGroup)
+        apiBanner = findViewById(R.id.txtApiBanner)
 
         adapter = MatchAdapter { match ->
             val intent = Intent(this, MatchDetailActivity::class.java)
@@ -65,14 +65,40 @@ class MainActivity : AppCompatActivity() {
         findViewById<Chip>(R.id.chipUpcoming).setOnClickListener { setFilter(Filter.UPCOMING) }
         findViewById<Chip>(R.id.chipFinished).setOnClickListener { setFilter(Filter.FINISHED) }
 
+        findViewById<TextView>(R.id.btnSettings).setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
+        apiBanner.setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
+
         swipe.setOnRefreshListener { loadMatches(showSpinner = true) }
+        updateBanner()
         loadMatches(showSpinner = true)
         startLiveTicker()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updateBanner()
+        if (ApiKeyStore.hasKey(this) && allMatches.isEmpty()) {
+            loadMatches(showSpinner = true)
+        }
     }
 
     override fun onDestroy() {
         liveJob?.cancel()
         super.onDestroy()
+    }
+
+    private fun updateBanner() {
+        if (ApiKeyStore.hasKey(this)) {
+            apiBanner.text = "Gerçek veri: API-Football bağlı · dokunarak ayarlar"
+            apiBanner.setBackgroundColor(0x332E7D32)
+        } else {
+            apiBanner.text = "API anahtarı yok — gerçek maçlar için buraya dokun ve anahtar gir"
+            apiBanner.setBackgroundColor(0x33C62828)
+        }
     }
 
     private fun setFilter(value: Filter) {
@@ -83,13 +109,18 @@ class MainActivity : AppCompatActivity() {
     private fun loadMatches(showSpinner: Boolean) {
         if (showSpinner) swipe.isRefreshing = true
         lifecycleScope.launch {
-            val matches = withContext(Dispatchers.IO) {
-                MatchRepository.loadDailyMatches()
+            val result = withContext(Dispatchers.IO) {
+                MatchRepository.loadDailyMatches(this@MainActivity)
             }
-            allMatches = matches
+            allMatches = result.matches
             val date = SimpleDateFormat("d MMMM yyyy, EEEE", Locale("tr")).format(Date())
-            val liveCount = matches.count { it.status == MatchStatus.LIVE }
-            headerMeta.text = "$date · ${matches.size} maç · $liveCount canlı"
+            val liveCount = result.matches.count { it.status == MatchStatus.LIVE }
+            headerMeta.text = if (result.error != null && result.matches.isEmpty()) {
+                result.error
+            } else {
+                "$date · ${result.matches.size} maç · $liveCount canlı · ${result.sourceNote}"
+            }
+            updateBanner()
             renderList()
             swipe.isRefreshing = false
         }
@@ -104,11 +135,13 @@ class MainActivity : AppCompatActivity() {
         }
         adapter.submit(filtered)
         emptyView.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
-        emptyView.text = when (filter) {
-            Filter.LIVE -> "Şu an canlı maç yok. Tüm maçlara geçebilirsin."
-            Filter.UPCOMING -> "Bugün için bekleyen maç kalmadı."
-            Filter.FINISHED -> "Henüz biten maç yok."
-            Filter.ALL -> "Maç listesi yüklenemedi."
+        emptyView.text = when {
+            !ApiKeyStore.hasKey(this) ->
+                "Gerçek sonuçlar için Ayarlar’dan API-Football anahtarı gir.\nÜcretsiz: dashboard.api-football.com"
+            filter == Filter.LIVE -> "Şu an canlı maç yok."
+            filter == Filter.UPCOMING -> "Bugün bekleyen maç kalmadı."
+            filter == Filter.FINISHED -> "Henüz biten maç yok."
+            else -> "Bugün için maç gelmedi veya API limiti doldu."
         }
     }
 
@@ -116,14 +149,15 @@ class MainActivity : AppCompatActivity() {
         liveJob?.cancel()
         liveJob = lifecycleScope.launch {
             while (isActive) {
-                delay(20_000)
-                if (allMatches.any { it.status == MatchStatus.LIVE }) {
+                delay(45_000)
+                if (!ApiKeyStore.hasKey(this@MainActivity)) continue
+                if (allMatches.any { it.status == MatchStatus.LIVE } || allMatches.isNotEmpty()) {
                     allMatches = withContext(Dispatchers.IO) {
-                        MatchRepository.refreshLive(allMatches)
+                        MatchRepository.refreshLive(this@MainActivity, allMatches)
                     }
                     val liveCount = allMatches.count { it.status == MatchStatus.LIVE }
                     val date = SimpleDateFormat("d MMMM yyyy, EEEE", Locale("tr")).format(Date())
-                    headerMeta.text = "$date · ${allMatches.size} maç · $liveCount canlı · güncellendi"
+                    headerMeta.text = "$date · ${allMatches.size} maç · $liveCount canlı · canlı güncellendi"
                     renderList()
                 }
             }

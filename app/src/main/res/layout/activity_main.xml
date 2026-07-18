@@ -11,15 +11,28 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="20dp"
         android:layout_marginTop="28dp"
-        android:layout_marginEnd="20dp"
+        android:layout_marginEnd="8dp"
         android:fontFamily="sans-serif-medium"
         android:letterSpacing="0.04"
         android:text="@string/app_name"
         android:textColor="@color/cream_text"
         android:textSize="34sp"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/btnSettings"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/btnSettings"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:padding="10dp"
+        android:text="Ayarlar"
+        android:textColor="@color/accent_amber"
+        android:textSize="14sp"
+        app:layout_constraintBottom_toBottomOf="@id/txtBrand"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/txtBrand" />
 
     <TextView
         android:id="@+id/txtTagline"
@@ -36,17 +49,32 @@
         app:layout_constraintTop_toBottomOf="@id/txtBrand" />
 
     <TextView
+        android:id="@+id/txtApiBanner"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="16dp"
+        android:padding="10dp"
+        android:text="API anahtarı ayarla"
+        android:textColor="@color/cream_text"
+        android:textSize="12sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/txtTagline" />
+
+    <TextView
         android:id="@+id/txtHeaderMeta"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="20dp"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="8dp"
         android:layout_marginEnd="20dp"
         android:textColor="@color/muted_text"
         android:textSize="13sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/txtTagline" />
+        app:layout_constraintTop_toBottomOf="@id/txtApiBanner" />
 
     <HorizontalScrollView
         android:id="@+id/scrollChips"

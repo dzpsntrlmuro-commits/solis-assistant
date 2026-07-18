@@ -4,13 +4,19 @@ import android.os.Bundle
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.macsans.app.R
 import com.macsans.app.adapter.PlayerAdapter
+import com.macsans.app.data.ApiKeyStore
+import com.macsans.app.data.MatchRepository
 import com.macsans.app.engine.PredictionEngine
 import com.macsans.app.model.Match
 import com.macsans.app.model.MatchStatus
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MatchDetailActivity : AppCompatActivity() {
 
@@ -29,10 +35,27 @@ class MatchDetailActivity : AppCompatActivity() {
             return
         }
 
+        findViewById<TextView>(R.id.btnBack).setOnClickListener { finish() }
+        bind(match)
+
+        if (ApiKeyStore.hasKey(this)) {
+            findViewById<TextView>(R.id.txtSummaryDetail).text =
+                "Gerçek API prediction yükleniyor…"
+            lifecycleScope.launch {
+                val detailed = withContext(Dispatchers.IO) {
+                    MatchRepository.loadMatchDetail(this@MatchDetailActivity, match)
+                }
+                cache = detailed
+                bind(detailed)
+            }
+        }
+    }
+
+    private fun bind(match: Match) {
         findViewById<TextView>(R.id.txtDetailTitle).text =
             "${match.homeTeam} vs ${match.awayTeam}"
         findViewById<TextView>(R.id.txtDetailLeague).text =
-            "${match.country} · ${match.league} · ${match.venue}"
+            "${match.country} · ${match.league} · ${match.venue} · ${match.dataSource}"
 
         val statusText = when (match.status) {
             MatchStatus.LIVE -> "CANLI ${match.minute}'  |  ${match.homeScore}-${match.awayScore}"
@@ -69,7 +92,5 @@ class MatchDetailActivity : AppCompatActivity() {
         val recycler = findViewById<RecyclerView>(R.id.recyclerPlayers)
         recycler.layoutManager = LinearLayoutManager(this)
         recycler.adapter = PlayerAdapter(match.homePlayers + match.awayPlayers)
-
-        findViewById<TextView>(R.id.btnBack).setOnClickListener { finish() }
     }
 }

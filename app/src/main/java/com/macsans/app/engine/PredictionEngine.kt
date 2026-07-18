@@ -10,30 +10,50 @@ import kotlin.math.roundToInt
 
 object PredictionEngine {
 
-    fun analyze(match: Match, weather: WeatherInfo?): WinBreakdown {
+    fun analyze(
+        match: Match,
+        weather: WeatherInfo?,
+        apiPercents: Triple<Int, Int, Int>? = null,
+        apiAdvice: String? = null
+    ): WinBreakdown {
         val w = weather ?: defaultWeather(match.city)
 
-        var home = 40.0 + match.homeForm * 0.35
-        var away = 40.0 + match.awayForm * 0.35
-        var draw = 20.0
+        var home: Double
+        var draw: Double
+        var away: Double
 
-        // Weather impact — home teams usually adapt better to local climate
-        val weatherShift = weatherShift(w)
-        home += weatherShift.first
-        away += weatherShift.second
-        draw += weatherShift.third
+        if (apiPercents != null && match.status != MatchStatus.FINISHED) {
+            // Start from real API-Football prediction, then adjust with live/weather/injury
+            home = apiPercents.first.toDouble()
+            draw = apiPercents.second.toDouble()
+            away = apiPercents.third.toDouble()
 
-        val homeInjury = injuryPenalty(match.homePlayers)
-        val awayInjury = injuryPenalty(match.awayPlayers)
-        home -= homeInjury
-        away -= awayInjury
+            val weatherShift = weatherShift(w)
+            home += weatherShift.first * 0.6
+            away += weatherShift.second * 0.6
+            draw += weatherShift.third * 0.6
 
-        val homeEmotion = emotionBonus(match.homePlayers)
-        val awayEmotion = emotionBonus(match.awayPlayers)
-        home += homeEmotion
-        away += awayEmotion
+            home -= injuryPenalty(match.homePlayers) * 0.7
+            away -= injuryPenalty(match.awayPlayers) * 0.7
+            home += emotionBonus(match.homePlayers)
+            away += emotionBonus(match.awayPlayers)
+        } else {
+            home = 40.0 + match.homeForm * 0.35
+            away = 40.0 + match.awayForm * 0.35
+            draw = 20.0
 
-        var liveNote = "Maç henüz başlamadı; oranlar öncesi form + şartlara göre hesaplandı."
+            val weatherShift = weatherShift(w)
+            home += weatherShift.first
+            away += weatherShift.second
+            draw += weatherShift.third
+
+            home -= injuryPenalty(match.homePlayers)
+            away -= injuryPenalty(match.awayPlayers)
+            home += emotionBonus(match.homePlayers)
+            away += emotionBonus(match.awayPlayers)
+        }
+
+        var liveNote = "Maç henüz başlamadı; oranlar gerçek fikstür + hava + sakatlık verisine göre."
         if (match.status == MatchStatus.LIVE) {
             val scoreDelta = match.homeScore - match.awayScore
             val minuteFactor = match.minute / 90.0
@@ -57,7 +77,7 @@ object PredictionEngine {
                     home = 0.0; away = 0.0; draw = 100.0
                 }
             }
-            liveNote = "Maç bitti: ${match.homeScore}-${match.awayScore}."
+            liveNote = "Maç bitti (gerçek skor): ${match.homeScore}-${match.awayScore}."
         }
 
         val normalized = normalize(home, draw, away)
@@ -65,8 +85,8 @@ object PredictionEngine {
         val weatherFactor = "Hava ${w.condition}, ${w.temperatureC}°C, rüzgar ${w.windKmh} km/s, yağış ${w.precipitationMm} mm. ${w.impactNote}"
         val injuryFactor = buildInjuryNote(match)
         val emotionFactor = buildEmotionNote(match)
-        val formFactor = "Form: ${match.homeTeam} ${match.homeForm}/100 · ${match.awayTeam} ${match.awayForm}/100"
-        val summary = buildSummary(match, normalized.first, normalized.second, normalized.third, w)
+        val formFactor = buildFormNote(match, apiAdvice)
+        val summary = buildSummary(match, normalized.first, normalized.second, normalized.third, w, apiAdvice)
 
         return WinBreakdown(
             homeWinPercent = normalized.first,
@@ -147,18 +167,25 @@ object PredictionEngine {
             parts += "${match.awayTeam}: ${awayOut.joinToString { "${it.name} (${injuryLabel(it.injuryLevel)})" }}"
         }
         return if (parts.isEmpty()) {
-            "Kritik sakatlık yok; kadrolar büyük ölçüde hazır."
+            "API sakatlık listesinde kritik eksik yok (veya lig kapsamı dışında)."
         } else {
-            "Sakatlık/eksik etkisi: " + parts.joinToString(" · ")
+            "Gerçek sakatlık/ceza (API-Football): " + parts.joinToString(" · ")
         }
     }
 
     private fun buildEmotionNote(match: Match): String {
+        if (match.homePlayers.isEmpty() && match.awayPlayers.isEmpty()) {
+            return "Duygusal durum: form ve canlı skor baskısından türetildi."
+        }
         val homeAvg = match.homePlayers.map { it.emotionScore }.average().roundToInt()
         val awayAvg = match.awayPlayers.map { it.emotionScore }.average().roundToInt()
-        val homeMood = moodLabel(homeAvg)
-        val awayMood = moodLabel(awayAvg)
-        return "Duygusal durum: ${match.homeTeam} $homeMood ($homeAvg/100), ${match.awayTeam} $awayMood ($awayAvg/100)."
+        return "Moral (form + canlı skor): ${match.homeTeam} ${moodLabel(homeAvg)} ($homeAvg/100), " +
+            "${match.awayTeam} ${moodLabel(awayAvg)} ($awayAvg/100)."
+    }
+
+    private fun buildFormNote(match: Match, apiAdvice: String?): String {
+        val base = "Form skoru: ${match.homeTeam} ${match.homeForm}/100 · ${match.awayTeam} ${match.awayForm}/100"
+        return if (!apiAdvice.isNullOrBlank()) "$base · API önerisi: $apiAdvice" else base
     }
 
     private fun buildSummary(
@@ -166,22 +193,26 @@ object PredictionEngine {
         home: Int,
         draw: Int,
         away: Int,
-        weather: WeatherInfo
+        weather: WeatherInfo,
+        apiAdvice: String?
     ): String {
         val favorite = when {
             home >= away && home >= draw -> match.homeTeam
             away >= home && away >= draw -> match.awayTeam
             else -> "Beraberlik"
         }
-        return "$favorite önde görünüyor (%${maxOf(home, draw, away)}). " +
-            "Kararı etkileyen başlıca unsurlar: ${weather.condition.lowercase()} hava, " +
-            "sakatlık dengesi ve canlı skor akışı."
+        val adviceBit = if (!apiAdvice.isNullOrBlank()) " API: $apiAdvice." else ""
+        return "$favorite önde (%${maxOf(home, draw, away)}). " +
+            "Kaynak: ${match.dataSource}. Hava: ${weather.condition}.${adviceBit}"
     }
 
     private fun normalize(home: Double, draw: Double, away: Double): Triple<Int, Int, Int> {
-        var h = max(1.0, home)
-        var d = max(1.0, draw)
-        var a = max(1.0, away)
+        var h = max(0.0, home)
+        var d = max(0.0, draw)
+        var a = max(0.0, away)
+        if (h + d + a <= 0.0) {
+            h = 1.0; d = 1.0; a = 1.0
+        }
         val sum = h + d + a
         var hi = ((h / sum) * 100).roundToInt()
         var di = ((d / sum) * 100).roundToInt()

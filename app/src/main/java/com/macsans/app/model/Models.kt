@@ -57,5 +57,7 @@ data class Match(
     val homePlayers: List<PlayerStatus>,
     val awayPlayers: List<PlayerStatus>,
     var weather: WeatherInfo? = null,
-    var analysis: WinBreakdown? = null
+    var analysis: WinBreakdown? = null,
+    val apiAdvice: String? = null,
+    val dataSource: String = "demo"
 )
