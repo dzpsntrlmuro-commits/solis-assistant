@@ -1,18 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">MaçŞansı</string>
-    <string name="tagline">Hava · sakatlık · duygu · canlı oran</string>
-    <string name="filter_all">Tümü</string>
-    <string name="filter_live">Canlı</string>
-    <string name="filter_upcoming">Bugün</string>
-    <string name="filter_finished">Biten</string>
-    <string name="empty_matches">Maç bulunamadı</string>
-    <string name="detail_title">Maç analizi</string>
-    <string name="back">← Listeye dön</string>
-    <string name="section_weather">Hava etkisi</string>
-    <string name="section_injury">Sakatlık etkisi</string>
-    <string name="section_emotion">Duygusal durum</string>
-    <string name="section_form">Form</string>
-    <string name="section_live">Canlı akış</string>
-    <string name="section_players">Oyuncu durumları</string>
+    <string name="app_name">Yüz Falı</string>
+    <string name="tagline">Yüzün ve duruşundan geleceğini keşfet</string>
+    <string name="btn_start">Fal Bak</string>
+    <string name="btn_stop">Durdur</string>
+    <string name="btn_speak">Sesli Oku</string>
+    <string name="btn_stop_speak">Sustur</string>
+    <string name="btn_retry">Yeniden Dene</string>
+    <string name="status_ready">Kameraya bakın ve fal bak butonuna basın</string>
+    <string name="status_scanning">Yüzünüz ve duruşunuz analiz ediliyor…</string>
+    <string name="status_done">Fal raporunuz hazır</string>
+    <string name="status_no_face">Yüz algılanamadı. Lütfen kameraya bakın.</string>
+    <string name="status_no_pose">Duruş algılanamadı. Omuzlarınızı gösterin.</string>
+    <string name="status_permission">Kamera izni gerekli</string>
+    <string name="section_future">Gelecek</string>
+    <string name="section_emotion">Duygusal Durum</string>
+    <string name="section_posture">Duruş Analizi</string>
+    <string name="section_face">Yüz Analizi</string>
+    <string name="report_title">Fal Raporu</string>
 </resources>

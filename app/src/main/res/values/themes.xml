@@ -1,19 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.MacSans" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/pitch_mid</item>
-        <item name="colorPrimaryVariant">@color/pitch_deep</item>
-        <item name="colorSecondary">@color/accent_amber</item>
+    <style name="Theme.YuzFali" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/mystic_mid</item>
+        <item name="colorPrimaryVariant">@color/mystic_deep</item>
+        <item name="colorSecondary">@color/accent_gold</item>
         <item name="android:statusBarColor">@color/night</item>
         <item name="android:navigationBarColor">@color/night</item>
         <item name="android:windowBackground">@color/night</item>
         <item name="android:textColorPrimary">@color/cream_text</item>
-        <item name="chipStyle">@style/Widget.MacSans.Chip</item>
-    </style>
-
-    <style name="Widget.MacSans.Chip" parent="Widget.MaterialComponents.Chip.Choice">
-        <item name="chipBackgroundColor">@color/panel_soft</item>
-        <item name="android:textColor">@color/cream_text</item>
-        <item name="checkedIconVisible">false</item>
     </style>
 </resources>

@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "MacSans"
+rootProject.name = "YuzFali"
 include ':app'
