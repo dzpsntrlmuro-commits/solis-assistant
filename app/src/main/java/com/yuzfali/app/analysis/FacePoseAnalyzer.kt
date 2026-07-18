@@ -9,12 +9,16 @@ import com.google.mlkit.vision.face.FaceDetectorOptions
 import com.google.mlkit.vision.pose.Pose
 import com.google.mlkit.vision.pose.PoseDetection
 import com.google.mlkit.vision.pose.PoseLandmark
-import com.google.mlkit.vision.pose.accurate.AccuratePoseDetectorOptions
+import com.google.mlkit.vision.pose.defaults.PoseDetectorOptions
 import com.yuzfali.app.model.AnalysisSnapshot
 import com.yuzfali.app.model.FaceFingerprint
 import com.yuzfali.app.model.FaceMetrics
 import com.yuzfali.app.model.PoseMetrics
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.suspendCancellableCoroutine
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.resume
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -24,47 +28,68 @@ class FacePoseAnalyzer {
 
     private val faceDetector = FaceDetection.getClient(
         FaceDetectorOptions.Builder()
-            .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
+            .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
             .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_ALL)
             .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_ALL)
             .enableTracking()
             .build()
     )
 
+    // Lite pose model: much faster than accurate, enough for fortune posture cues.
     private val poseDetector = PoseDetection.getClient(
-        AccuratePoseDetectorOptions.Builder()
-            .setDetectorMode(AccuratePoseDetectorOptions.STREAM_MODE)
+        PoseDetectorOptions.Builder()
+            .setDetectorMode(PoseDetectorOptions.STREAM_MODE)
             .build()
     )
 
     private var faceAccumulator = FaceAccumulator()
     private var poseAccumulator = PoseAccumulator()
     private val fingerprintSamples = mutableListOf<FaceFingerprint>()
+    private val faceFrames = AtomicInteger(0)
+    private val lastFrameHadFace = AtomicBoolean(false)
+    private var frameIndex = 0
 
     fun reset() {
         faceAccumulator = FaceAccumulator()
         poseAccumulator = PoseAccumulator()
         fingerprintSamples.clear()
+        faceFrames.set(0)
+        lastFrameHadFace.set(false)
+        frameIndex = 0
     }
 
+    fun faceFrameCount(): Int = faceFrames.get()
+
+    fun lastFrameDetectedFace(): Boolean = lastFrameHadFace.get()
+
     suspend fun analyzeFrame(imageProxy: ImageProxy) {
-        val mediaImage = imageProxy.image ?: run {
+        try {
+            val mediaImage = imageProxy.image ?: return
+            val rotation = imageProxy.imageInfo.rotationDegrees
+            val inputImage = InputImage.fromMediaImage(mediaImage, rotation)
+            val runPose = frameIndex % 2 == 0
+            frameIndex++
+
+            coroutineScope {
+                val facesDeferred = async { detectFaces(inputImage) }
+                val poseDeferred = async {
+                    if (runPose) detectPose(inputImage) else null
+                }
+                val faces = facesDeferred.await()
+                val pose = poseDeferred.await()
+
+                val face = faces.firstOrNull()
+                lastFrameHadFace.set(face != null)
+                if (face != null) {
+                    faceAccumulator.add(face)
+                    faceFrames.set(faceAccumulator.count)
+                    FaceFingerprintExtractor.fromFace(face)?.let { fingerprintSamples.add(it) }
+                }
+                pose?.let { poseAccumulator.add(it) }
+            }
+        } finally {
             imageProxy.close()
-            return
         }
-        val rotation = imageProxy.imageInfo.rotationDegrees
-        val inputImage = InputImage.fromMediaImage(mediaImage, rotation)
-
-        val faces = detectFaces(inputImage)
-        val pose = detectPose(inputImage)
-
-        faces.firstOrNull()?.let { face ->
-            faceAccumulator.add(face)
-            FaceFingerprintExtractor.fromFace(face)?.let { fingerprintSamples.add(it) }
-        }
-        pose?.let { poseAccumulator.add(it) }
-
-        imageProxy.close()
     }
 
     fun snapshot(): AnalysisSnapshot = AnalysisSnapshot(
@@ -111,7 +136,8 @@ class FacePoseAnalyzer {
         private var cheekWidthRatio = 0f
         private var landmarkAsymmetry = 0f
         private var landmarkCount = 0
-        private var count = 0
+        var count = 0
+            private set
 
         fun add(face: Face) {
             val smileValue = face.smilingProbability ?: 0f

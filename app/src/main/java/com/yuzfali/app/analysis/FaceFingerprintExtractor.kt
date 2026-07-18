@@ -48,7 +48,7 @@ object FaceFingerprintExtractor {
         val rcY = ny(rightCheek.y)
 
         val eyeDist = dist(leX, leY, reX, reY)
-        if (eyeDist < 0.12f) return null
+        if (eyeDist < 0.08f) return null
 
         val eyeMidX = (leX + reX) / 2f
         val eyeMidY = (leY + reY) / 2f
@@ -99,19 +99,19 @@ object FaceFingerprintExtractor {
     }
 
     fun scanQuality(fingerprints: List<FaceFingerprint>): Float {
-        if (fingerprints.size < 6) return 0f
+        if (fingerprints.size < 3) return 0f
+        // Compare consecutive samples only — cheaper and less harsh than all-pairs.
         var totalDistance = 0f
         var pairs = 0
-        for (i in fingerprints.indices) {
-            for (j in i + 1 until fingerprints.size) {
-                totalDistance += fingerprints[i].distanceTo(fingerprints[j])
-                pairs++
-            }
+        for (i in 0 until fingerprints.lastIndex) {
+            totalDistance += fingerprints[i].distanceTo(fingerprints[i + 1])
+            pairs++
         }
         if (pairs == 0) return 0f
         val avgDistance = totalDistance / pairs
         return (1f - avgDistance / MAX_STABLE_DISTANCE).coerceIn(0f, 1f)
     }
 
-    private const val MAX_STABLE_DISTANCE = 0.06f
+    // Allow normal micro-movement / lighting flicker without rejecting the scan.
+    private const val MAX_STABLE_DISTANCE = 0.18f
 }

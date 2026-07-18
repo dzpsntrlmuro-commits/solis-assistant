@@ -9,8 +9,12 @@
     <string name="btn_retry">Yeniden Dene</string>
     <string name="status_ready">Kameraya bakın ve fal bak butonuna basın</string>
     <string name="status_scanning">Yüzünüz ve duruşunuz analiz ediliyor…</string>
+    <string name="status_looking_for_face">Yüz aranıyor… Kameraya düz bakın</string>
+    <string name="status_face_locked">Yüz algılandı (%1$d kare) — sabit tutun</string>
+    <string name="status_face_lost">Yüz kayboldu — tekrar kameraya bakın</string>
     <string name="status_done">Fal raporunuz hazır</string>
     <string name="status_no_face">Yüz algılanamadı. Lütfen kameraya bakın.</string>
+    <string name="status_no_face_hint">Yüzünüzü çerçeveye alın, iyi ışıkta kameraya düz bakın ve sabit durun.</string>
     <string name="status_no_pose">Duruş algılanamadı. Omuzlarınızı gösterin.</string>
     <string name="status_permission">Kamera izni gerekli</string>
     <string name="section_future">Gelecek</string>
