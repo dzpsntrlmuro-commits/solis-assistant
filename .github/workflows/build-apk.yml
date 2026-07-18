@@ -48,7 +48,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: solis-apk
+          name: match-predictor-apk
           path: app-debug.apk
           if-no-files-found: warn
           retention-days: 30

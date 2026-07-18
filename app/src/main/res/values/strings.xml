@@ -1,4 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Solis Asistan</string>
+    <string name="app_name">Maç Tahmin Pro</string>
+    <string name="tab_daily">Günlük Maçlar</string>
+    <string name="tab_live">Canlı Maçlar</string>
+    <string name="refresh">Yenile</string>
+    <string name="loading">Maçlar yükleniyor…</string>
+    <string name="no_matches">Bugün maç bulunamadı</string>
+    <string name="no_live_matches">Şu anda canlı maç yok</string>
+    <string name="win_probability">Kazanma Oranı</string>
+    <string name="draw_probability">Beraberlik</string>
+    <string name="weather_impact">Hava Durumu Etkisi</string>
+    <string name="injury_impact">Sakatlık Etkisi</string>
+    <string name="emotional_impact">Duygusal Durum</string>
+    <string name="analysis_title">Detaylı Analiz</string>
+    <string name="home_team">Ev Sahibi</string>
+    <string name="away_team">Deplasman</string>
+    <string name="live">CANLI</string>
+    <string name="scheduled">Planlandı</string>
+    <string name="finished">Bitti</string>
+    <string name="error_network">Bağlantı hatası. Örnek veriler gösteriliyor.</string>
+    <string name="factors_title">Tahmin Faktörleri</string>
+    <string name="home_advantage">Ev Sahibi Avantajı</string>
+    <string name="form">Son Form</string>
+    <string name="momentum">Maç İçi Momentum</string>
 </resources>
