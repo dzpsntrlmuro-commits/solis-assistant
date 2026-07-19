@@ -11,44 +11,28 @@ import kotlin.random.Random
 object FortuneEngine {
 
     fun generate(snapshot: AnalysisSnapshot): FortuneReport {
-        val seed = snapshot.fingerprint?.features?.contentHashCode()?.toLong()
-            ?: snapshot.face.frameCount.toLong()
+        val seed = buildSeed(snapshot)
         val rng = Random(seed)
         val scores = computeScores(snapshot.face, snapshot.pose)
 
-        val faceSection = buildFaceReading(snapshot.face, scores, rng)
-        val postureSection = buildPostureReading(snapshot.pose, scores, rng)
-        val emotionSection = buildEmotionReading(snapshot.face, snapshot.pose, scores)
-        val futureSection = buildFutureReading(snapshot.pose, scores, rng)
-
-        val fullSpeech = buildString {
-            append("Yüz falı raporunuz hazır. ")
-            append(faceSection)
-            append(" ")
-            append(postureSection)
-            append(" ")
-            append(emotionSection)
-            append(" ")
-            append(futureSection)
-        }
-
         return FortuneReport(
-            faceSection = faceSection,
-            postureSection = postureSection,
-            emotionSection = emotionSection,
-            futureSection = futureSection,
-            fullSpeech = fullSpeech
+            faceSection = buildFaceReading(snapshot.face, scores, rng),
+            postureSection = buildPostureReading(snapshot.pose, scores, rng),
+            emotionSection = buildEmotionReading(snapshot.face, snapshot.pose, scores),
+            futureSection = buildFutureReading(snapshot.pose, scores, rng)
         )
     }
 
-    fun refreshLiveSections(snapshot: AnalysisSnapshot, stored: FortuneReport): FortuneReport {
-        val scores = computeScores(snapshot.face, snapshot.pose)
-        val postureSection = buildPostureReading(snapshot.pose, scores, Random(snapshot.pose.frameCount.toLong()))
-        val emotionSection = buildEmotionReading(snapshot.face, snapshot.pose, scores)
-        return stored.withLiveSections(
-            emotionSection = emotionSection,
-            postureSection = postureSection
-        )
+    private fun buildSeed(snapshot: AnalysisSnapshot): Long {
+        val face = snapshot.face
+        val pose = snapshot.pose
+        var seed = face.frameCount.toLong()
+        seed = seed * 31 + (face.smileProbability * 1000).toLong()
+        seed = seed * 31 + (face.faceRatio * 1000).toLong()
+        seed = seed * 31 + (face.eyeDistanceRatio * 1000).toLong()
+        seed = seed * 31 + pose.frameCount.toLong()
+        seed = seed * 31 + pose.shoulderTilt.toLong()
+        return seed
     }
 
     private data class AnalysisScores(

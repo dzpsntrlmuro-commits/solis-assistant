@@ -5,7 +5,6 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
-import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -18,7 +17,6 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.yuzfali.app.R
 import com.yuzfali.app.analysis.FacePoseAnalyzer
-import com.yuzfali.app.data.FaceProfileStore
 import com.yuzfali.app.databinding.ActivityMainBinding
 import com.yuzfali.app.engine.FortuneEngine
 import com.yuzfali.app.model.FortuneReport
@@ -32,7 +30,6 @@ import java.util.concurrent.Executors
 class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private lateinit var binding: ActivityMainBinding
-    private lateinit var profileStore: FaceProfileStore
     private val analyzer = FacePoseAnalyzer()
     private val cameraExecutor = Executors.newSingleThreadExecutor()
 
@@ -44,9 +41,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var isSpeaking = false
 
     private val permissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { grants ->
-        if (grants.values.all { it }) {
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
             startCamera()
         } else {
             binding.tvStatus.text = getString(R.string.status_permission)
@@ -59,7 +56,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        profileStore = FaceProfileStore(this)
         textToSpeech = TextToSpeech(this, this)
         setupUi()
         checkPermissions()
@@ -70,7 +66,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             if (isScanning) stopScan() else startScan()
         }
         binding.btnSpeak.setOnClickListener {
-            if (isSpeaking) stopSpeaking() else speakReport()
+            if (isSpeaking) stopSpeaking() else speakFuture()
         }
         binding.btnRetry.setOnClickListener {
             resetToScan()
@@ -78,11 +74,12 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun checkPermissions() {
-        val needed = arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
-        if (needed.all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
+            PackageManager.PERMISSION_GRANTED
+        ) {
             startCamera()
         } else {
-            permissionLauncher.launch(needed)
+            permissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 
@@ -165,49 +162,14 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             return
         }
 
-        val fingerprint = snapshot.fingerprint
-        if (fingerprint == null || snapshot.fingerprintSampleCount < MIN_FINGERPRINT_SAMPLES) {
-            binding.tvStatus.text = getString(R.string.status_no_face)
-            Toast.makeText(
-                this,
-                "Yüz hatları net algılanamadı. Yüzünüzü ve omuzlarınızı sabit tutarak tekrar deneyin.",
-                Toast.LENGTH_LONG
-            ).show()
-            return
-        }
-
-        if (snapshot.fingerprintQuality < MIN_FINGERPRINT_QUALITY) {
-            binding.tvStatus.text = getString(R.string.status_no_face)
-            Toast.makeText(
-                this,
-                "Tarama sırasında çok hareket ettiniz. Sabit durup tekrar deneyin.",
-                Toast.LENGTH_LONG
-            ).show()
-            return
-        }
-
-        val match = profileStore.findMatch(fingerprint, snapshot.fingerprintQuality)
-        val report = if (match.isConfidentMatch && match.profile != null) {
-            binding.tvStatus.text = getString(R.string.status_recognized, match.profile.displayName)
-            FortuneEngine.refreshLiveSections(snapshot, match.profile.report)
-        } else {
-            val newReport = FortuneEngine.generate(snapshot)
-            val saved = profileStore.saveProfile(fingerprint, newReport)
-            binding.tvStatus.text = getString(R.string.status_new_face, saved.displayName)
-            newReport
-        }
-
+        val report = FortuneEngine.generate(snapshot)
         currentReport = report
+        binding.tvStatus.text = getString(R.string.status_done)
         showReport(report)
-        speakReport(match.isConfidentMatch)
+        speakFuture()
     }
 
     private fun showReport(report: FortuneReport) {
-        if (binding.tvStatus.text.isNullOrBlank() ||
-            binding.tvStatus.text == getString(R.string.status_scanning)
-        ) {
-            binding.tvStatus.text = getString(R.string.status_done)
-        }
         binding.tvFaceReport.text = report.faceSection
         binding.tvPostureReport.text = report.postureSection
         binding.tvEmotionReport.text = report.emotionSection
@@ -239,7 +201,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         panel.layoutParams = params
     }
 
-    private fun speakReport(isReturningUser: Boolean = false) {
+    private fun speakFuture() {
         val report = currentReport ?: return
         if (!ttsReady) {
             Toast.makeText(this, "Ses motoru hazırlanıyor…", Toast.LENGTH_SHORT).show()
@@ -248,12 +210,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         textToSpeech?.stop()
         isSpeaking = true
         binding.btnSpeak.text = getString(R.string.btn_stop_speak)
-        val intro = if (isReturningUser) {
-            "Sizi tanıdım. Karakter ve gelecek yorumunuz aynı, anlık duygu ve duruşunuz güncellendi. "
-        } else {
-            ""
-        }
-        textToSpeech?.speak(intro + report.fullSpeech, TextToSpeech.QUEUE_FLUSH, null, UTTERANCE_ID)
+        textToSpeech?.speak(report.futureSection, TextToSpeech.QUEUE_FLUSH, null, UTTERANCE_ID)
     }
 
     private fun stopSpeaking() {
@@ -300,8 +257,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     companion object {
         private const val SCAN_DURATION_MS = 5000L
         private const val MIN_FACE_FRAMES = 3
-        private const val MIN_FINGERPRINT_SAMPLES = 10
-        private const val MIN_FINGERPRINT_QUALITY = 0.65f
         private const val UTTERANCE_ID = "fortune_speech"
     }
 }

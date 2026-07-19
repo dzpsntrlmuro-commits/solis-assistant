@@ -41,34 +41,12 @@ data class PoseMetrics(
 
 data class AnalysisSnapshot(
     val face: FaceMetrics = FaceMetrics(),
-    val pose: PoseMetrics = PoseMetrics(),
-    val fingerprint: FaceFingerprint? = null,
-    val fingerprintSampleCount: Int = 0,
-    val fingerprintQuality: Float = 0f
+    val pose: PoseMetrics = PoseMetrics()
 )
 
 data class FortuneReport(
     val faceSection: String,
     val postureSection: String,
     val emotionSection: String,
-    val futureSection: String,
-    val fullSpeech: String
-) {
-    fun withLiveSections(emotionSection: String, postureSection: String): FortuneReport {
-        val fullSpeech = buildString {
-            append("Yüz falı raporunuz hazır. ")
-            append(faceSection)
-            append(" ")
-            append(postureSection)
-            append(" ")
-            append(emotionSection)
-            append(" ")
-            append(futureSection)
-        }
-        return copy(
-            postureSection = postureSection,
-            emotionSection = emotionSection,
-            fullSpeech = fullSpeech
-        )
-    }
-}
+    val futureSection: String
+)

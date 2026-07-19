@@ -11,7 +11,6 @@ import com.google.mlkit.vision.pose.PoseDetection
 import com.google.mlkit.vision.pose.PoseLandmark
 import com.google.mlkit.vision.pose.accurate.AccuratePoseDetectorOptions
 import com.yuzfali.app.model.AnalysisSnapshot
-import com.yuzfali.app.model.FaceFingerprint
 import com.yuzfali.app.model.FaceMetrics
 import com.yuzfali.app.model.PoseMetrics
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -39,12 +38,10 @@ class FacePoseAnalyzer {
 
     private var faceAccumulator = FaceAccumulator()
     private var poseAccumulator = PoseAccumulator()
-    private val fingerprintSamples = mutableListOf<FaceFingerprint>()
 
     fun reset() {
         faceAccumulator = FaceAccumulator()
         poseAccumulator = PoseAccumulator()
-        fingerprintSamples.clear()
     }
 
     suspend fun analyzeFrame(imageProxy: ImageProxy) {
@@ -58,10 +55,7 @@ class FacePoseAnalyzer {
         val faces = detectFaces(inputImage)
         val pose = detectPose(inputImage)
 
-        faces.firstOrNull()?.let { face ->
-            faceAccumulator.add(face)
-            FaceFingerprintExtractor.fromFace(face)?.let { fingerprintSamples.add(it) }
-        }
+        faces.firstOrNull()?.let { faceAccumulator.add(it) }
         pose?.let { poseAccumulator.add(it) }
 
         imageProxy.close()
@@ -69,10 +63,7 @@ class FacePoseAnalyzer {
 
     fun snapshot(): AnalysisSnapshot = AnalysisSnapshot(
         face = faceAccumulator.average(),
-        pose = poseAccumulator.average(),
-        fingerprint = FaceFingerprintExtractor.average(fingerprintSamples),
-        fingerprintSampleCount = fingerprintSamples.size,
-        fingerprintQuality = FaceFingerprintExtractor.scanQuality(fingerprintSamples)
+        pose = poseAccumulator.average()
     )
 
     fun close() {

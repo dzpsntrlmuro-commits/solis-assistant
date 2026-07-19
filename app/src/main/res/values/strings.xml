@@ -4,7 +4,7 @@
     <string name="tagline">Yüzün ve duruşundan geleceğini keşfet</string>
     <string name="btn_start">Fal Bak</string>
     <string name="btn_stop">Durdur</string>
-    <string name="btn_speak">Sesli Oku</string>
+    <string name="btn_speak">Geleceği Sesli Oku</string>
     <string name="btn_stop_speak">Sustur</string>
     <string name="btn_retry">Yeniden Dene</string>
     <string name="status_ready">Kameraya bakın ve fal bak butonuna basın</string>
@@ -17,7 +17,5 @@
     <string name="section_emotion">Duygusal Durum</string>
     <string name="section_posture">Duruş Analizi</string>
     <string name="section_face">Yüz Analizi</string>
-    <string name="status_recognized">Tanınan yüz: %1$s — önceki falınız gösteriliyor</string>
-    <string name="status_new_face">Yeni yüz kaydedildi: %1$s</string>
     <string name="report_title">Fal Raporu</string>
 </resources>
