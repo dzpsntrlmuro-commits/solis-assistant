@@ -40,8 +40,18 @@ class MainActivity : AppCompatActivity() {
         binding.resultsList.layoutManager = LinearLayoutManager(this)
         binding.resultsList.adapter = adapter
 
-        binding.searchButton.setOnClickListener { submitSearch(binding.searchInput) }
-        binding.landingSearchButton.setOnClickListener { submitSearch(binding.landingSearchInput) }
+        // Upper search → Murotube / YouTube (unchanged)
+        binding.searchButton.setOnClickListener { submitTubeSearch(binding.searchInput) }
+        binding.landingSearchButton.setOnClickListener { submitTubeSearch(binding.landingSearchInput) }
+        bindSearchAction(binding.searchInput) { submitTubeSearch(it) }
+        bindSearchAction(binding.landingSearchInput) { submitTubeSearch(it) }
+
+        // Lower search → film / video results
+        binding.filmSearchButton.setOnClickListener { submitFilmSearch(binding.filmSearchInput) }
+        binding.landingFilmSearchButton.setOnClickListener { submitFilmSearch(binding.landingFilmSearchInput) }
+        bindSearchAction(binding.filmSearchInput) { submitFilmSearch(it) }
+        bindSearchAction(binding.landingFilmSearchInput) { submitFilmSearch(it) }
+
         binding.trendingButton.setOnClickListener {
             lastQuery = ""
             showBrowsingChrome()
@@ -54,9 +64,6 @@ class MainActivity : AppCompatActivity() {
             if (lastQuery.isBlank()) viewModel.loadTrending() else viewModel.search(lastQuery)
         }
 
-        bindSearchAction(binding.searchInput)
-        bindSearchAction(binding.landingSearchInput)
-
         animateLanding()
 
         lifecycleScope.launch {
@@ -64,10 +71,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun bindSearchAction(field: EditText) {
+    private fun bindSearchAction(field: EditText, onSearch: (EditText) -> Unit) {
         field.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                submitSearch(field)
+                onSearch(field)
                 true
             } else {
                 false
@@ -75,7 +82,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun submitSearch(source: EditText) {
+    private fun submitTubeSearch(source: EditText) {
         val query = source.text?.toString()?.trim().orEmpty()
         if (query.isBlank()) return
         lastQuery = query
@@ -84,6 +91,19 @@ class MainActivity : AppCompatActivity() {
         hideKeyboard()
         showBrowsingChrome()
         viewModel.search(query)
+    }
+
+    private fun submitFilmSearch(source: EditText) {
+        val query = source.text?.toString()?.trim().orEmpty()
+        if (query.isBlank()) return
+        binding.filmSearchInput.setText(query)
+        binding.landingFilmSearchInput.setText(query)
+        hideKeyboard()
+        startActivity(
+            Intent(this, FilmSearchActivity::class.java).apply {
+                putExtra(FilmSearchActivity.EXTRA_QUERY, query)
+            }
+        )
     }
 
     private fun showBrowsingChrome() {

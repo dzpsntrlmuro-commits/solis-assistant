@@ -3,7 +3,9 @@
     <string name="app_name">Murotube</string>
     <string name="brand_sub">Murovideo</string>
     <string name="search_hint">Video ara…</string>
+    <string name="film_search_hint">Film ara…</string>
     <string name="search">Ara</string>
+
     <string name="search_action">Videoları ara</string>
     <string name="tagline">İzlemek istediğin videoyu hemen bul</string>
     <string name="empty_title">Ne izlemek istersin?</string>

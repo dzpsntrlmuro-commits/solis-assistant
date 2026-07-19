@@ -31,5 +31,11 @@
             android:resizeableActivity="true"
             android:supportsPictureInPicture="false"
             android:theme="@style/Theme.Murotube.Player" />
+
+        <activity
+            android:name=".ui.FilmSearchActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Murotube.Player"
+            android:windowSoftInputMode="adjustResize" />
     </application>
 </manifest>

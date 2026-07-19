@@ -110,7 +110,20 @@ object AdBlockFilter {
         "securepubads.g.doubleclick.net",
         "www.googletagservices.com",
         "www.googletagmanager.com",
-        "fundingchoicesmessages.google.com"
+        "fundingchoicesmessages.google.com",
+        "pagead2.googleadservices.com",
+        "adservice.google.co.uk",
+        "ads.google.com",
+        "ad.mail.ru",
+        "an.facebook.com",
+        "pixel.facebook.com",
+        "connect.facebook.net",
+        "googleads4.g.doubleclick.net",
+        "adclick.g.doubleclick.net",
+        "cm.g.doubleclick.net",
+        "gads.pubmatic.com",
+        "ads.pubmatic.com",
+        "ep2.facebook.com"
     )
 
     private val blockedPathMarkers = listOf(
@@ -123,15 +136,22 @@ object AdBlockFilter {
         "www-pagead",
         "doubleclick.net",
         "googlesyndication.com",
-        "googleadservices.com"
+        "googleadservices.com",
+        "/aclk?",
+        "/gen_204?atyp=i",
+        "pagead/ads",
+        "pagead/conversion",
+        "/adservice",
+        "adsense"
     )
 
     fun shouldBlock(url: String): Boolean {
         val lower = url.lowercase()
-        // Never block the actual video media CDN or player assets needed for playback
+        // Keep media / search result assets working
         if (lower.contains("googlevideo.com") && !lower.contains("ad")) return false
         if (lower.contains("ytimg.com") && !lower.contains("pagead")) return false
         if (lower.contains("jnn-pa.googleapis.com")) return false
+        if (lower.contains("encrypted-tbn") || lower.contains("gstatic.com/images")) return false
 
         if (blockedPathMarkers.any { lower.contains(it) }) return true
         val hostPart = lower
