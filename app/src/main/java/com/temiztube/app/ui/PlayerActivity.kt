@@ -1,17 +1,27 @@
 package com.temiztube.app.ui
 
 import android.annotation.SuppressLint
+import android.content.pm.ActivityInfo
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Bundle
+import android.view.View
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.constraintlayout.widget.ConstraintSet
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.MediaItem
@@ -35,12 +45,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.io.ByteArrayInputStream
 
-/**
- * Instant playback strategy:
- * 1) Open ad-blocked WebView immediately (no waiting)
- * 2) In parallel race Piped for a clean stream (≤5s)
- * 3) If clean stream arrives, switch to ExoPlayer (fully ad-free)
- */
 @SuppressLint("SetJavaScriptEnabled", "UnsafeOptInUsageError")
 class PlayerActivity : AppCompatActivity() {
 
@@ -52,9 +56,13 @@ class PlayerActivity : AppCompatActivity() {
     private var videoId: String = ""
     private var resolveJob: Job? = null
     private var usingExo = false
+    private var isFullscreen = false
+    private var webCustomView: View? = null
+    private var webCustomViewCallback: WebChromeClient.CustomViewCallback? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        WindowCompat.setDecorFitsSystemWindows(window, true)
         binding = ActivityPlayerBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -65,9 +73,32 @@ class PlayerActivity : AppCompatActivity() {
 
         binding.playerTitle.text = title
         binding.playerMeta.text = uploader.ifBlank { "Murovideo" }
-        binding.backButton.setOnClickListener { finish() }
+        binding.backButton.setOnClickListener {
+            if (isFullscreen) exitFullscreen() else finish()
+        }
+        binding.fullscreenButton.setOnClickListener { toggleFullscreen() }
         binding.retryButton.setOnClickListener { startFastPlayback() }
         binding.webFallbackButton.isVisible = false
+
+        binding.playerView.setFullscreenButtonClickListener { enter ->
+            if (enter) enterFullscreen() else exitFullscreen()
+        }
+
+        onBackPressedDispatcher.addCallback(
+            this,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    when {
+                        webCustomView != null -> hideWebCustomView()
+                        isFullscreen -> exitFullscreen()
+                        else -> {
+                            isEnabled = false
+                            onBackPressedDispatcher.onBackPressed()
+                        }
+                    }
+                }
+            }
+        )
 
         if (videoUrl.isBlank() || videoId.isBlank()) {
             showError(getString(R.string.error_stream))
@@ -77,6 +108,70 @@ class PlayerActivity : AppCompatActivity() {
         startFastPlayback()
     }
 
+    private fun toggleFullscreen() {
+        if (isFullscreen) exitFullscreen() else enterFullscreen()
+    }
+
+    private fun enterFullscreen() {
+        if (isFullscreen) return
+        isFullscreen = true
+
+        binding.infoPanel.isVisible = false
+        binding.backButton.isVisible = false
+        binding.fullscreenButton.setImageResource(R.drawable.ic_fullscreen_exit)
+        binding.fullscreenButton.contentDescription = getString(R.string.fullscreen_exit)
+
+        val set = ConstraintSet()
+        set.clone(binding.playerRoot)
+        set.clear(R.id.playerContainer, ConstraintSet.BOTTOM)
+        set.connect(
+            R.id.playerContainer,
+            ConstraintSet.BOTTOM,
+            ConstraintSet.PARENT_ID,
+            ConstraintSet.BOTTOM
+        )
+        set.applyTo(binding.playerRoot)
+
+        binding.playerView.resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        val controller = WindowInsetsControllerCompat(window, binding.root)
+        controller.hide(WindowInsetsCompat.Type.systemBars())
+        controller.systemBarsBehavior =
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+    }
+
+    private fun exitFullscreen() {
+        if (!isFullscreen && webCustomView == null) return
+        hideWebCustomView()
+        if (!isFullscreen) return
+        isFullscreen = false
+
+        binding.infoPanel.isVisible = true
+        binding.backButton.isVisible = true
+        binding.fullscreenButton.setImageResource(R.drawable.ic_fullscreen)
+        binding.fullscreenButton.contentDescription = getString(R.string.fullscreen)
+
+        val set = ConstraintSet()
+        set.clone(binding.playerRoot)
+        set.clear(R.id.playerContainer, ConstraintSet.BOTTOM)
+        set.connect(
+            R.id.playerContainer,
+            ConstraintSet.BOTTOM,
+            R.id.infoPanel,
+            ConstraintSet.TOP
+        )
+        set.applyTo(binding.playerRoot)
+
+        WindowCompat.setDecorFitsSystemWindows(window, true)
+        WindowInsetsControllerCompat(window, binding.root)
+            .show(WindowInsetsCompat.Type.systemBars())
+
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+    }
+
     private fun startFastPlayback() {
         usingExo = false
         resolveJob?.cancel()
@@ -84,10 +179,8 @@ class PlayerActivity : AppCompatActivity() {
         binding.retryButton.isVisible = false
         binding.streamLoading.isVisible = true
 
-        // 1) Instant: ad-blocked embedded player (no network race wait)
         openAdBlockedWebPlayer()
 
-        // 2) Parallel: try clean Piped stream quickly, then switch
         resolveJob = lifecycleScope.launch {
             runCatching { repository.resolvePlayableFast(videoUrl) }
                 .onSuccess { stream ->
@@ -103,7 +196,6 @@ class PlayerActivity : AppCompatActivity() {
                     startExoPlayer(stream)
                 }
                 .onFailure {
-                    // Keep WebView — already playing with ad blocking
                     binding.streamLoading.isVisible = false
                     binding.playerMeta.text = getString(R.string.fast_adblock_meta)
                 }
@@ -126,7 +218,6 @@ class PlayerActivity : AppCompatActivity() {
             webView = created
         }
 
-        // Custom HTML shell loads embed and aggressively skips ads
         val html = """
             <!DOCTYPE html>
             <html>
@@ -140,12 +231,12 @@ class PlayerActivity : AppCompatActivity() {
             <body>
               <iframe
                 id="player"
-                src="https://www.youtube-nocookie.com/embed/$videoId?autoplay=1&playsinline=1&rel=0&modestbranding=1&controls=1"
-                allow="autoplay; encrypted-media; picture-in-picture"
-                allowfullscreen></iframe>
+                src="https://www.youtube-nocookie.com/embed/$videoId?autoplay=1&playsinline=0&fs=1&rel=0&modestbranding=1&controls=1"
+                allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                allowfullscreen
+                webkitallowfullscreen
+                mozallowfullscreen></iframe>
               <script>
-                // Keep trying to skip ads / hide ad UI inside this document shell.
-                // Cross-origin iframe limits deep DOM access; network ads are blocked in shouldInterceptRequest.
                 setInterval(function() {
                   try {
                     document.querySelectorAll(
@@ -183,6 +274,33 @@ class PlayerActivity : AppCompatActivity() {
             @JavascriptInterface
             fun noop() = Unit
         }, "Murotube")
+        wv.webChromeClient = object : WebChromeClient() {
+            override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
+                if (view == null) return
+                hideWebCustomView()
+                webCustomView = view
+                webCustomViewCallback = callback
+                binding.webFullscreenContainer.removeAllViews()
+                binding.webFullscreenContainer.addView(
+                    view,
+                    FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                )
+                binding.webFullscreenContainer.isVisible = true
+                enterFullscreen()
+            }
+
+            override fun onHideCustomView() {
+                hideWebCustomView()
+                exitFullscreen()
+            }
+
+            override fun getDefaultVideoPoster(): Bitmap? {
+                return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+            }
+        }
         wv.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(
                 view: WebView?,
@@ -197,11 +315,18 @@ class PlayerActivity : AppCompatActivity() {
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 binding.streamLoading.isVisible = false
-                // Inject skipper into top-level page
                 view?.evaluateJavascript(AD_SKIP_JS, null)
             }
         }
         return wv
+    }
+
+    private fun hideWebCustomView() {
+        webCustomViewCallback?.onCustomViewHidden()
+        webCustomViewCallback = null
+        webCustomView = null
+        binding.webFullscreenContainer.removeAllViews()
+        binding.webFullscreenContainer.isVisible = false
     }
 
     private fun startExoPlayer(stream: PlayableStream) {
@@ -235,7 +360,6 @@ class PlayerActivity : AppCompatActivity() {
 
             override fun onPlayerError(error: PlaybackException) {
                 binding.streamLoading.isVisible = false
-                // Fall back to web player instantly
                 usingExo = false
                 openAdBlockedWebPlayer()
             }
@@ -291,6 +415,7 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun removeWebView() {
+        hideWebCustomView()
         webView?.let {
             (it.parent as? ViewGroup)?.removeView(it)
             it.stopLoading()
@@ -306,6 +431,7 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         resolveJob?.cancel()
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         releasePlayer()
         removeWebView()
         super.onDestroy()

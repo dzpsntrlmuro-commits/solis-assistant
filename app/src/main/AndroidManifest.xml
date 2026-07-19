@@ -26,8 +26,10 @@
 
         <activity
             android:name=".ui.PlayerActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize"
             android:exported="false"
+            android:resizeableActivity="true"
+            android:supportsPictureInPicture="false"
             android:theme="@style/Theme.Murotube.Player" />
     </application>
 </manifest>

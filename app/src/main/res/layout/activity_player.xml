@@ -2,9 +2,11 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/playerRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/player_bg">
+    android:background="@color/player_bg"
+    android:fitsSystemWindows="false">
 
     <FrameLayout
         android:id="@+id/playerContainer"
@@ -21,7 +23,7 @@
             android:layout_height="match_parent"
             android:keepScreenOn="true"
             app:resize_mode="fit"
-            app:show_buffering="always"
+            app:show_buffering="when_playing"
             app:surface_type="texture_view"
             app:use_controller="true" />
 
@@ -31,6 +33,14 @@
             android:layout_height="48dp"
             android:layout_gravity="center"
             android:indeterminateTint="@color/accent" />
+
+        <!-- Host for WebView HTML5 fullscreen custom view -->
+        <FrameLayout
+            android:id="@+id/webFullscreenContainer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/black"
+            android:visibility="gone" />
     </FrameLayout>
 
     <ImageButton
@@ -43,6 +53,19 @@
         android:padding="10dp"
         android:src="@drawable/ic_back"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="@android:color/white" />
+
+    <ImageButton
+        android:id="@+id/fullscreenButton"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_margin="12dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/fullscreen"
+        android:padding="10dp"
+        android:src="@drawable/ic_fullscreen"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:tint="@android:color/white" />
 

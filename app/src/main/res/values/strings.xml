@@ -18,6 +18,8 @@
     <string name="retry">Tekrar dene</string>
     <string name="trending">Popüler videolar</string>
     <string name="back">Geri</string>
+    <string name="fullscreen">Tam ekran</string>
+    <string name="fullscreen_exit">Tam ekrandan çık</string>
     <string name="open_web_player">Web oynatıcı</string>
     <string name="web_fallback_meta">Murovideo oynatıcı</string>
     <string name="fast_adblock_meta">Murovideo</string>
