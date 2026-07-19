@@ -104,8 +104,29 @@
                 android:alpha="0">
 
                 <LinearLayout
+                    android:id="@+id/tileAssistant"
+                    style="@style/ActionTile"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/assistant"
+                        android:textColor="@color/ink"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/assistant_desc"
+                        android:textColor="@color/muted"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <LinearLayout
                     android:id="@+id/tileAnalyze"
                     style="@style/ActionTile"
+                    android:layout_marginTop="12dp"
                     android:orientation="vertical">
                     <TextView
                         android:layout_width="match_parent"

@@ -99,6 +99,10 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        binding.tileAssistant.setOnClickListener {
+            startActivity(Intent(this, AssistantActivity::class.java))
+        }
+
         binding.tileExtract.setOnClickListener {
             requireApk { extractApk(openFilesAfter = true) }
         }
