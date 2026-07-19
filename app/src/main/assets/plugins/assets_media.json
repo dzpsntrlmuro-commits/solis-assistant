@@ -1,0 +1,7 @@
+{
+  "id": "assets_media",
+  "name": "Medya varlıkları",
+  "description": "APK içindeki medya dosyalarını listeler",
+  "type": "files",
+  "extensions": [".png", ".jpg", ".jpeg", ".webp", ".mp3", ".mp4", ".wav", ".ogg"]
+}

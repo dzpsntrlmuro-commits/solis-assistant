@@ -1,0 +1,12 @@
+{
+  "id": "network_surface",
+  "name": "Ağ yüzeyi",
+  "description": "Ağ ile ilgili izin ve bileşenleri bulur",
+  "type": "permissions",
+  "patterns": [
+    "INTERNET",
+    "ACCESS_NETWORK_STATE",
+    "ACCESS_WIFI_STATE",
+    "CHANGE_NETWORK_STATE"
+  ]
+}
