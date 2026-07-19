@@ -1,15 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">İçki Say</string>
-    <string name="tagline">Kamerayı içkilere tut, yapay zeka saysın ve sesli söylesin</string>
-    <string name="btn_count">İçkileri Say</string>
-    <string name="btn_counting">Sayılıyor…</string>
-    <string name="btn_speak">Tekrar Söyle</string>
-    <string name="btn_stop_speak">Sustur</string>
-    <string name="status_ready">Arka kamerayı içkilere tutun ve butona basın</string>
-    <string name="status_counting">Yapay zeka içkileri sayıyor…</string>
-    <string name="status_permission">Kamera izni gerekli</string>
-    <string name="status_camera_error">Kamera başlatılamadı</string>
-    <string name="result_title">Sonuç</string>
-    <string name="detail_title">Detay</string>
+    <string name="app_name">APK Atölye</string>
+    <string name="tagline">Kendi APK dosyalarını analiz et, çıkar ve yeniden paketle</string>
+    <string name="disclaimer">Yalnızca sahip olduğunuz veya analiz izniniz olan APK dosyaları için kullanın. Üçüncü taraf uygulamaları kırmak, lisans atlatmak veya yetkisiz değiştirmek yasal değildir.</string>
+    <string name="select_apk">APK seç</string>
+    <string name="analyze">Analiz et</string>
+    <string name="extract">İçeriği çıkar</string>
+    <string name="classes">Sınıf listesi</string>
+    <string name="rebuild">Yeniden paketle</string>
+    <string name="plugins">Analiz eklentileri</string>
+    <string name="no_apk">Henüz APK seçilmedi</string>
+    <string name="working">İşleniyor…</string>
+    <string name="done">Tamamlandı</string>
+    <string name="error_generic">Bir hata oluştu</string>
+    <string name="search_classes">Sınıf ara…</string>
+    <string name="run_plugins">Eklentileri çalıştır</string>
+    <string name="legal_title">Yasal uyarı</string>
 </resources>
