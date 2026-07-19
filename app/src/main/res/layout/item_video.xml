@@ -5,7 +5,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:paddingTop="10dp"
-    android:paddingBottom="10dp">
+    android:paddingBottom="12dp">
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -25,26 +25,13 @@
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|end"
             android:layout_margin="10dp"
-            android:background="#CC14181F"
-            android:fontFamily="sans-serif-medium"
+            android:background="#CC102126"
+            android:fontFamily="@font/outfit_medium"
             android:paddingHorizontal="8dp"
             android:paddingVertical="3dp"
             android:textColor="@android:color/white"
             android:textSize="12sp"
             tools:text="12:34" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="top|start"
-            android:layout_margin="10dp"
-            android:background="@drawable/bg_badge"
-            android:fontFamily="sans-serif-medium"
-            android:paddingHorizontal="8dp"
-            android:paddingVertical="3dp"
-            android:text="@string/ad_free_badge"
-            android:textColor="@color/accent"
-            android:textSize="11sp" />
     </FrameLayout>
 
     <TextView
@@ -53,7 +40,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
         android:ellipsize="end"
-        android:fontFamily="sans-serif-medium"
+        android:fontFamily="@font/outfit_medium"
         android:maxLines="2"
         android:textColor="@color/ink"
         android:textSize="16sp"
@@ -65,6 +52,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
         android:ellipsize="end"
+        android:fontFamily="@font/outfit_regular"
         android:maxLines="1"
         android:textColor="@color/muted"
         android:textSize="13sp"

@@ -1,24 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">TemizTube</string>
-    <string name="search_hint">YouTube\'da video ara…</string>
+    <string name="app_name">Murotube</string>
+    <string name="brand_sub">Murovideo</string>
+    <string name="search_hint">Video ara…</string>
     <string name="search">Ara</string>
     <string name="search_action">Videoları ara</string>
-    <string name="tagline">Reklamsız YouTube arama ve izleme</string>
+    <string name="tagline">İzlemek istediğin videoyu hemen bul</string>
     <string name="empty_title">Ne izlemek istersin?</string>
-    <string name="empty_subtitle">Yukarıdan ara; videolar doğrudan stream ile açılır, oynatıcıda reklam yok.</string>
+    <string name="empty_subtitle">Aramaya yaz, Murotube saniyeler içinde açsın.</string>
     <string name="loading">Aranıyor…</string>
     <string name="loading_stream">Video hazırlanıyor…</string>
     <string name="no_results">Sonuç bulunamadı</string>
     <string name="error_network">Bağlantı hatası. İnterneti kontrol edip tekrar dene.</string>
     <string name="error_generic">Bir hata oluştu: %1$s</string>
     <string name="error_stream">Video akışı alınamadı</string>
-    <string name="ad_free_badge">Reklamsız</string>
     <string name="views_format">%1$s görüntülenme</string>
     <string name="retry">Tekrar dene</string>
-    <string name="trending">Popüler</string>
+    <string name="trending">Popüler videolar</string>
     <string name="back">Geri</string>
     <string name="open_web_player">Web oynatıcı</string>
-    <string name="web_fallback_meta">Gömülü oynatıcı · reklam istekleri engellenir</string>
-    <string name="fast_adblock_meta">Hızlı oynatma · reklamlar engelleniyor</string>
+    <string name="web_fallback_meta">Murovideo oynatıcı</string>
+    <string name="fast_adblock_meta">Murovideo</string>
+    <string name="landing_cta">Aramaya başla</string>
 </resources>

@@ -6,7 +6,7 @@ import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.localization.ContentCountry
 import org.schabi.newpipe.extractor.localization.Localization
 
-class TemizTubeApp : Application() {
+class MurotubeApp : Application() {
     override fun onCreate() {
         super.onCreate()
         NewPipe.init(

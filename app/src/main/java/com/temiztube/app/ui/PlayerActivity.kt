@@ -64,7 +64,7 @@ class PlayerActivity : AppCompatActivity() {
         videoId = YoutubeRepository.extractVideoId(videoUrl).orEmpty()
 
         binding.playerTitle.text = title
-        binding.playerMeta.text = uploader.ifBlank { "YouTube" }
+        binding.playerMeta.text = uploader.ifBlank { "Murovideo" }
         binding.backButton.setOnClickListener { finish() }
         binding.retryButton.setOnClickListener { startFastPlayback() }
         binding.webFallbackButton.isVisible = false
@@ -94,9 +94,7 @@ class PlayerActivity : AppCompatActivity() {
                     if (isDestroyed || isFinishing) return@onSuccess
                     binding.playerTitle.text = stream.title.ifBlank { binding.playerTitle.text }
                     binding.playerMeta.text = buildString {
-                        append(stream.uploader.ifBlank { "YouTube" })
-                        append(" · ")
-                        append(getString(R.string.ad_free_badge))
+                        append(stream.uploader.ifBlank { "Murovideo" })
                         if (stream.qualityLabel.isNotBlank()) {
                             append(" · ")
                             append(stream.qualityLabel)
@@ -184,7 +182,7 @@ class PlayerActivity : AppCompatActivity() {
         wv.addJavascriptInterface(object {
             @JavascriptInterface
             fun noop() = Unit
-        }, "TemizTube")
+        }, "Murotube")
         wv.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(
                 view: WebView?,

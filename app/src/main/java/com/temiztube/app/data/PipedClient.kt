@@ -58,7 +58,7 @@ object PipedClient {
     private fun fetchFrom(base: String, videoId: String): PlayableStream {
         val request = Request.Builder()
             .url("$base/streams/$videoId")
-            .header("User-Agent", "TemizTube/1.2")
+            .header("User-Agent", "Murotube/1.2")
             .header("Accept", "application/json")
             .get()
             .build()

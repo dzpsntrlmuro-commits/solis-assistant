@@ -1,16 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ink">#14181F</color>
-    <color name="ink_soft">#2A3140</color>
-    <color name="muted">#5C6578</color>
-    <color name="surface">#FFFFFF</color>
-    <color name="bg">#EEF1F6</color>
-    <color name="bg_deep">#E2E7F0</color>
-    <color name="accent">#D61F3A</color>
-    <color name="accent_dark">#A8162C</color>
-    <color name="accent_soft">#FFE4E8</color>
-    <color name="outline">#CDD4E0</color>
-    <color name="player_bg">#0B0D12</color>
+    <color name="ink">#102126</color>
+    <color name="ink_soft">#1C333A</color>
+    <color name="muted">#5A727A</color>
+    <color name="surface">#F7FBFC</color>
+    <color name="bg">#E8F1F3</color>
+    <color name="bg_deep">#D5E6EA</color>
+    <color name="accent">#E23A3A</color>
+    <color name="accent_dark">#B82B2B</color>
+    <color name="accent_soft">#FDE8E8</color>
+    <color name="teal">#0E3A42</color>
+    <color name="teal_mid">#1A5A66</color>
+    <color name="mist">#C9E0E5</color>
+    <color name="outline">#B7CDD3</color>
+    <color name="player_bg">#0A1619</color>
     <color name="on_accent">#FFFFFF</color>
-    <color name="ic_launcher_background">#D61F3A</color>
+    <color name="ic_launcher_background">#0E3A42</color>
 </resources>
