@@ -1,13 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="bg_dark">#0B1220</color>
-    <color name="panel">#152238</color>
-    <color name="panel_soft">#1E2F4A</color>
-    <color name="accent">#22C55E</color>
-    <color name="accent_soft">#86EFAC</color>
-    <color name="amber">#F59E0B</color>
-    <color name="cream_text">#F8FAFC</color>
-    <color name="muted_text">#94A3B8</color>
+    <color name="ink">#0F1A17</color>
+    <color name="ink_soft">#173028</color>
+    <color name="panel">#1C3A31</color>
+    <color name="panel_elevated">#244B3F</color>
+    <color name="line">#2F5A4C</color>
+    <color name="mint">#3DDC97</color>
+    <color name="mint_dim">#249F6C</color>
+    <color name="sand">#E8D9A8</color>
+    <color name="sand_dim">#B9A978</color>
+    <color name="danger">#E35D5D</color>
+    <color name="text_primary">#F2F7F4</color>
+    <color name="text_secondary">#A7C0B5</color>
     <color name="white">#FFFFFF</color>
-    <color name="overlay_box">#22C55E</color>
 </resources>

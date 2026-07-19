@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.IckiSay" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/accent</item>
-        <item name="colorPrimaryVariant">@color/panel</item>
-        <item name="colorSecondary">@color/amber</item>
-        <item name="android:statusBarColor">@color/bg_dark</item>
-        <item name="android:navigationBarColor">@color/bg_dark</item>
-        <item name="android:windowBackground">@color/bg_dark</item>
-        <item name="android:textColorPrimary">@color/cream_text</item>
+    <style name="Theme.ApkLab" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/mint</item>
+        <item name="colorPrimaryVariant">@color/mint_dim</item>
+        <item name="colorSecondary">@color/sand</item>
+        <item name="colorOnPrimary">@color/ink</item>
+        <item name="colorOnSecondary">@color/ink</item>
+        <item name="android:statusBarColor">@color/ink</item>
+        <item name="android:navigationBarColor">@color/ink</item>
+        <item name="android:windowBackground">@color/ink</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="fontFamily">sans-serif-condensed</item>
     </style>
 </resources>

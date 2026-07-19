@@ -1,15 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">İçki Say</string>
-    <string name="tagline">Kamerayı içkilere tut, yapay zeka saysın ve sesli söylesin</string>
-    <string name="btn_count">İçkileri Say</string>
-    <string name="btn_counting">Sayılıyor…</string>
-    <string name="btn_speak">Tekrar Söyle</string>
-    <string name="btn_stop_speak">Sustur</string>
-    <string name="status_ready">Arka kamerayı içkilere tutun ve butona basın</string>
-    <string name="status_counting">Yapay zeka içkileri sayıyor…</string>
-    <string name="status_permission">Kamera izni gerekli</string>
-    <string name="status_camera_error">Kamera başlatılamadı</string>
-    <string name="result_title">Sonuç</string>
-    <string name="detail_title">Detay</string>
+    <string name="app_name">ApkLab</string>
+    <string name="tagline">APK aç · kod çek · eklenti çalıştır · yeniden paketle</string>
+    <string name="btn_pick_apk">APK Dosyası Seç</string>
+    <string name="btn_installed">Yüklü Uygulamalar</string>
+    <string name="btn_plugins">Eklentiler</string>
+    <string name="btn_extract">Kodu Çıkar</string>
+    <string name="btn_rebuild">APK Yeniden Paketle</string>
+    <string name="btn_run_plugins">Eklentileri Çalıştır</string>
+    <string name="btn_open_folder">Çıktı Klasörü</string>
+    <string name="hint_search">Uygulama ara…</string>
+    <string name="workspace_title">Çalışma Alanı</string>
+    <string name="plugins_title">Eklenti Motoru</string>
+    <string name="code_viewer_title">Kod / Metin</string>
+    <string name="status_idle">Bir APK seçerek başlayın</string>
+    <string name="status_extracting">APK açılıyor…</string>
+    <string name="status_analyzing">Kodlar taranıyor…</string>
+    <string name="status_rebuilding">Yeniden paketleniyor…</string>
+    <string name="status_done">Tamamlandı</string>
+    <string name="disclaimer">Yalnızca kendi uygulamalarınız veya yetkinizin olduğu paketler için kullanın. Eğitim ve güvenlik analizi amaçlıdır.</string>
+    <string name="tab_overview">Özet</string>
+    <string name="tab_classes">Sınıflar</string>
+    <string name="tab_strings">Metinler</string>
+    <string name="tab_files">Dosyalar</string>
+    <string name="tab_plugins">Eklenti</string>
 </resources>
