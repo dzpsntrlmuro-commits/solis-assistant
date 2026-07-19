@@ -246,8 +246,8 @@ class AssistantEngine(private val context: Context) {
             )
         } catch (e: Exception) {
             rememberReply(
-                "Düşünürken hata: ${e.message}\n" +
-                    "API anahtarını kontrol et veya «durum» / «özet» ile biriken notlara bak."
+                "Şu an düşünemedim: ${e.message}\n\n" +
+                    "Notların silinmedi — «özet» ile bak, düzelince «uygula» de."
             )
         }
     }

@@ -24,18 +24,17 @@ data class CodePatch(
  */
 class GeminiClient(private val context: Context) {
 
+    private val prefs get() = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
     fun hasKey(): Boolean = !getApiKey().isNullOrBlank()
 
     fun getApiKey(): String? =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString(KEY, null)
-            ?.trim()
-            ?.takeIf { it.isNotEmpty() }
+        prefs.getString(KEY, null)?.trim()?.takeIf { it.isNotEmpty() }
 
     fun setApiKey(key: String?) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit()
+        prefs.edit()
             .putString(KEY, key?.trim().orEmpty())
+            .remove(KEY_MODEL) // reset cached model when key changes
             .apply()
     }
 
@@ -45,7 +44,7 @@ class GeminiClient(private val context: Context) {
         workspaceSummary: String,
         focusFiles: Map<String, String>
     ): AgentDecision {
-        val apiKey = getApiKey() ?: error("API anahtarı yok")
+        val apiKey = getApiKey() ?: error("API anahtarı yok. Asistan → API ile Gemini anahtarı kaydet.")
 
         val focusBlock = buildString {
             focusFiles.entries.take(8).forEach { (path, content) ->
@@ -67,6 +66,7 @@ Davranış:
 3) Yapabileceğin dosya değişikliklerini patches olarak ver.
 4) Gerekirse local_actions kullan: extract, rebuild, open_files, open_test, pick_image
 5) Zararlı yazılım / lisans kırma / ödeme atlatma üretme. Kullanıcı kendi uygulamasını düzenliyor.
+6) Test mesajlarında (örn. "1 2 3 deneme") nazikçe onayla, brief'e gereksiz iş ekleme.
 
 SADECE şu JSON'u döndür (markdown yok):
 {
@@ -127,25 +127,87 @@ $latestUserMessage
                     .put("maxOutputTokens", 8192)
             )
 
-        val models = listOf(
-            "gemini-2.0-flash",
-            "gemini-2.0-flash-lite",
-            "gemini-1.5-flash"
-        )
+        val models = resolveModels(apiKey)
         var lastError: Exception? = null
         for (model in models) {
             try {
-                val raw = post(apiKey, model, body.toString())
+                val raw = postGenerate(apiKey, model, body.toString())
                 val text = extractModelText(raw)
-                return parseDecision(text)
+                val decision = parseDecision(text)
+                prefs.edit().putString(KEY_MODEL, model).apply()
+                return decision
             } catch (e: Exception) {
                 lastError = e
+                // stale cached model — clear and continue
+                if (model == prefs.getString(KEY_MODEL, null)) {
+                    prefs.edit().remove(KEY_MODEL).apply()
+                }
             }
         }
-        throw lastError ?: error("Gemini yanıt vermedi")
+        throw Exception(friendlyError(lastError))
     }
 
-    private fun post(apiKey: String, model: String, jsonBody: String): String {
+    private fun resolveModels(apiKey: String): List<String> {
+        val preferred = mutableListOf<String>()
+        prefs.getString(KEY_MODEL, null)?.let { preferred += it }
+        preferred += listOf(
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-flash-latest",
+            "gemini-2.0-flash",
+            "gemini-2.0-flash-001",
+            "gemini-3.5-flash"
+        )
+        // Discover live models from API as final fallbacks
+        runCatching { listGenerateContentModels(apiKey) }
+            .getOrDefault(emptyList())
+            .forEach { preferred += it }
+
+        return preferred.distinct()
+    }
+
+    private fun listGenerateContentModels(apiKey: String): List<String> {
+        val url = URL(
+            "https://generativelanguage.googleapis.com/v1beta/models?key=$apiKey&pageSize=50"
+        )
+        val conn = (url.openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = 20_000
+            readTimeout = 30_000
+        }
+        val code = conn.responseCode
+        val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+        val raw = BufferedReader(InputStreamReader(stream, StandardCharsets.UTF_8)).use { it.readText() }
+        if (code !in 200..299) return emptyList()
+
+        val root = JSONObject(raw)
+        val models = root.optJSONArray("models") ?: return emptyList()
+        val names = mutableListOf<String>()
+        for (i in 0 until models.length()) {
+            val m = models.getJSONObject(i)
+            val methods = m.optJSONArray("supportedGenerationMethods") ?: JSONArray()
+            var supports = false
+            for (j in 0 until methods.length()) {
+                if (methods.getString(j) == "generateContent") {
+                    supports = true
+                    break
+                }
+            }
+            if (!supports) continue
+            val name = m.optString("name", "")
+                .removePrefix("models/")
+            // Prefer flash models for speed/cost
+            if (name.contains("flash", ignoreCase = true) &&
+                !name.contains("embed", ignoreCase = true) &&
+                !name.contains("image", ignoreCase = true)
+            ) {
+                names += name
+            }
+        }
+        return names
+    }
+
+    private fun postGenerate(apiKey: String, model: String, jsonBody: String): String {
         val url = URL(
             "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$apiKey"
         )
@@ -160,22 +222,52 @@ $latestUserMessage
         val code = conn.responseCode
         val stream = if (code in 200..299) conn.inputStream else conn.errorStream
         val raw = BufferedReader(InputStreamReader(stream, StandardCharsets.UTF_8)).use { it.readText() }
-        if (code !in 200..299) error("Gemini ($model) $code: ${raw.take(500)}")
+        if (code !in 200..299) {
+            val apiMsg = runCatching {
+                JSONObject(raw).getJSONObject("error").optString("message")
+            }.getOrNull()
+            error("HTTP $code / $model${if (!apiMsg.isNullOrBlank()) ": $apiMsg" else ""}")
+        }
         return raw
+    }
+
+    private fun friendlyError(e: Exception?): String {
+        val msg = e?.message.orEmpty()
+        return when {
+            msg.contains("API_KEY_INVALID", true) || msg.contains("API key not valid", true) ->
+                "API anahtarı geçersiz. Google AI Studio’dan yeni bir anahtar alıp Asistan → API ile kaydet."
+            msg.contains("PERMISSION_DENIED", true) || msg.contains("403") ->
+                "API anahtarının Gemini izni yok veya kısıtlı. AI Studio’da anahtarı kontrol et."
+            msg.contains("429") || msg.contains("RESOURCE_EXHAUSTED", true) ->
+                "Gemini kotası doldu. Biraz bekleyip tekrar dene."
+            msg.contains("404") || msg.contains("not found", true) ->
+                "Gemini modeli bulunamadı. Uygulamayı güncelledim; tekrar dene. Hâlâ olursa AI Studio’da model erişimini kontrol et."
+            msg.contains("Unable to resolve host", true) || msg.contains("UnknownHost", true) ->
+                "İnternet yok veya Gemini’ye ulaşılamıyor."
+            else -> "Gemini hatası: ${msg.take(220)}"
+        }
     }
 
     private fun extractModelText(raw: String): String {
         val root = JSONObject(raw)
         val candidates = root.optJSONArray("candidates") ?: error("Gemini yanıtı boş")
-        if (candidates.length() == 0) error("Gemini aday yok")
-        val content = candidates.getJSONObject(0).optJSONObject("content")
-        val parts = content?.optJSONArray("parts") ?: error("Gemini parts yok")
+        if (candidates.length() == 0) {
+            val block = root.optJSONObject("promptFeedback")?.toString().orEmpty()
+            error("Gemini aday yok${if (block.isNotBlank()) ": $block" else ""}")
+        }
+        val candidate = candidates.getJSONObject(0)
+        val finish = candidate.optString("finishReason")
+        val content = candidate.optJSONObject("content")
+        val parts = content?.optJSONArray("parts")
+        if (parts == null || parts.length() == 0) {
+            error("Gemini metin yok (finish=$finish)")
+        }
         val sb = StringBuilder()
         for (i in 0 until parts.length()) {
             sb.append(parts.getJSONObject(i).optString("text"))
         }
         val text = sb.toString().trim()
-        if (text.isEmpty()) error("Gemini boş metin")
+        if (text.isEmpty()) error("Gemini boş metin (finish=$finish)")
         return text
     }
 
@@ -228,5 +320,6 @@ $latestUserMessage
     companion object {
         private const val PREFS = "apk_atolye_ai"
         private const val KEY = "gemini_api_key"
+        private const val KEY_MODEL = "working_model"
     }
 }

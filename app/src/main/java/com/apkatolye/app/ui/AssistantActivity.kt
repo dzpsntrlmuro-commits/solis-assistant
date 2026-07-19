@@ -258,13 +258,30 @@ class AssistantActivity : AppCompatActivity() {
 
                 override fun onError(error: Int) {
                     binding.btnMic.text = "Ses"
-                    if (continuousListen) {
-                        // Soft retry without spamming chat
-                        mainHandler.postDelayed({
-                            if (continuousListen) startListening()
-                        }, 800)
-                    } else if (error != SpeechRecognizer.ERROR_CLIENT) {
-                        appendBot("Sesi kaçırdım — tekrar söyle veya yaz.")
+                    when (error) {
+                        SpeechRecognizer.ERROR_NO_MATCH,
+                        SpeechRecognizer.ERROR_SPEECH_TIMEOUT,
+                        SpeechRecognizer.ERROR_CLIENT -> {
+                            if (continuousListen) {
+                                mainHandler.postDelayed({
+                                    if (continuousListen) startListening()
+                                }, 600)
+                            }
+                        }
+                        SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS ->
+                            appendBot("Mikrofon izni yok.")
+                        SpeechRecognizer.ERROR_NETWORK,
+                        SpeechRecognizer.ERROR_NETWORK_TIMEOUT ->
+                            appendBot("Ses tanıma için internet gerekli.")
+                        else -> {
+                            if (!continuousListen) {
+                                appendBot("Sesi alamadım — tekrar söyle veya yaz.")
+                            } else {
+                                mainHandler.postDelayed({
+                                    if (continuousListen) startListening()
+                                }, 700)
+                            }
+                        }
                     }
                 }
 
