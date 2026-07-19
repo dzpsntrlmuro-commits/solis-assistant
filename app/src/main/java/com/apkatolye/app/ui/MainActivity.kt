@@ -24,7 +24,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private var selectedDisplayName: String? = null
 
-    private val pickApk = registerForActivityResult(
+    // GetContent("*/*") shows all files including APKs that OpenDocument often hides
+    private val pickAnyFile = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri == null) return@registerForActivityResult
+        importApk(uri)
+    }
+
+    private val pickOpenDocument = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         if (uri == null) return@registerForActivityResult
@@ -41,11 +49,17 @@ class MainActivity : AppCompatActivity() {
         wireActions()
     }
 
+    override fun onResume() {
+        super.onResume()
+        refreshSelectedState()
+    }
+
     private fun playEntrance() {
         val views = listOf(
             binding.brand,
             binding.tagline,
             binding.btnSelectApk,
+            binding.btnBrowseFiles,
             binding.apkStatus,
             binding.actions,
             binding.disclaimer
@@ -56,7 +70,7 @@ class MainActivity : AppCompatActivity() {
             view.animate()
                 .alpha(1f)
                 .translationY(0f)
-                .setStartDelay((80L * index))
+                .setStartDelay((70L * index))
                 .setDuration(420L)
                 .setInterpolator(DecelerateInterpolator())
                 .start()
@@ -71,11 +85,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun wireActions() {
         binding.btnSelectApk.setOnClickListener {
-            pickApk.launch(arrayOf(
-                "application/vnd.android.package-archive",
-                "application/octet-stream",
-                "*/*"
-            ))
+            // Show all files so .apk is visible in Downloads / Files apps
+            pickAnyFile.launch("*/*")
+        }
+
+        binding.btnBrowseFiles.setOnClickListener {
+            startActivity(Intent(this, FilesActivity::class.java))
         }
 
         binding.tileAnalyze.setOnClickListener {
@@ -85,7 +100,15 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.tileExtract.setOnClickListener {
-            requireApk { extractApk() }
+            requireApk { extractApk(openFilesAfter = true) }
+        }
+
+        binding.tileFiles.setOnClickListener {
+            startActivity(Intent(this, FilesActivity::class.java))
+        }
+
+        binding.tileTest.setOnClickListener {
+            startActivity(Intent(this, TestActivity::class.java))
         }
 
         binding.tileClasses.setOnClickListener {
@@ -105,6 +128,12 @@ class MainActivity : AppCompatActivity() {
                 startActivity(Intent(this, RebuildActivity::class.java))
             }
         }
+
+        // Long-press APK select for SAF document picker fallback
+        binding.btnSelectApk.setOnLongClickListener {
+            pickOpenDocument.launch(arrayOf("*/*"))
+            true
+        }
     }
 
     private fun requireApk(block: () -> Unit) {
@@ -122,21 +151,34 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val displayName = queryDisplayName(uri) ?: "selected.apk"
+                if (!displayName.endsWith(".apk", ignoreCase = true) &&
+                    contentResolver.getType(uri)?.contains("package-archive") != true
+                ) {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Uyarı: dosya .apk uzantılı görünmüyor, yine de içe aktarılıyor",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+
                 withContext(Dispatchers.IO) {
                     val dest = WorkspacePaths.selectedApk(this@MainActivity)
                     contentResolver.openInputStream(uri)?.use { input ->
                         FileOutputStream(dest).use { output -> input.copyTo(output) }
                     } ?: error("Dosya okunamadı")
 
+                    // Basic ZIP/APK sanity check
+                    if (dest.length() < 100) error("Dosya boş veya geçersiz")
+
                     WorkspacePaths.metaFile(this@MainActivity).writeText(displayName)
 
-                    // Clear previous extract so rebuild doesn't use stale data
                     val extractDir = WorkspacePaths.extractDir(this@MainActivity)
                     if (extractDir.exists()) extractDir.deleteRecursively()
                 }
                 selectedDisplayName = displayName
                 refreshSelectedState()
-                binding.statusLine.text = "APK hazır: $displayName"
+                binding.statusLine.text = "APK hazır: $displayName (${ApkAnalyzer.formatSize(WorkspacePaths.selectedApk(this@MainActivity).length())})"
+                Toast.makeText(this@MainActivity, "APK seçildi: $displayName", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
                 binding.statusLine.text = "İçe aktarma hatası: ${e.message}"
                 Toast.makeText(this@MainActivity, e.message ?: "Hata", Toast.LENGTH_LONG).show()
@@ -146,7 +188,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun extractApk() {
+    private fun extractApk(openFilesAfter: Boolean) {
         setLoading(true)
         binding.statusLine.text = "İçerik çıkarılıyor…"
         lifecycleScope.launch {
@@ -160,6 +202,15 @@ class MainActivity : AppCompatActivity() {
                 binding.statusLine.text =
                     "Çıkarıldı: ${result.fileCount} dosya → ${result.outputDir.absolutePath}"
                 Toast.makeText(this@MainActivity, "İçerik çıkarıldı", Toast.LENGTH_SHORT).show()
+                if (openFilesAfter) {
+                    startActivity(
+                        Intent(this@MainActivity, FilesActivity::class.java)
+                            .putExtra(
+                                FilesActivity.EXTRA_START_DIR,
+                                result.outputDir.absolutePath
+                            )
+                    )
+                }
             } catch (e: Exception) {
                 binding.statusLine.text = "Çıkarma hatası: ${e.message}"
             } finally {
@@ -175,7 +226,7 @@ class MainActivity : AppCompatActivity() {
 
         if (!apk.exists()) {
             binding.apkName.text = getString(com.apkatolye.app.R.string.no_apk)
-            binding.apkMeta.text = ""
+            binding.apkMeta.text = "Dosya seçici tüm dosyaları gösterir (.apk dahil)"
             return
         }
 
@@ -183,7 +234,6 @@ class MainActivity : AppCompatActivity() {
         binding.apkName.text = name
         binding.apkMeta.text = ApkAnalyzer.formatSize(apk.length()) + "  ·  " + apk.absolutePath
 
-        // Soft pulse on status panel when APK present
         binding.apkStatus.animate().scaleX(1.02f).scaleY(1.02f).setDuration(160)
             .withEndAction {
                 binding.apkStatus.animate().scaleX(1f).scaleY(1f).setDuration(160).start()
@@ -195,7 +245,7 @@ class MainActivity : AppCompatActivity() {
             val idx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
             if (idx >= 0 && cursor.moveToFirst()) return cursor.getString(idx)
         }
-        return uri.lastPathSegment
+        return uri.lastPathSegment?.substringAfterLast('/')
     }
 
     private fun setLoading(loading: Boolean) {

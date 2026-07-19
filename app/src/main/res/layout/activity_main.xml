@@ -48,6 +48,15 @@
                 android:text="@string/select_apk"
                 android:alpha="0" />
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnBrowseFiles"
+                style="@style/Button.Secondary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="Dosyalarımdan APK / klasör aç"
+                android:alpha="0" />
+
             <LinearLayout
                 android:id="@+id/apkStatus"
                 android:layout_width="match_parent"
@@ -131,6 +140,48 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
                         android:text="APK içeriğini uygulama klasörüne aç"
+                        android:textColor="@color/muted"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/tileFiles"
+                    style="@style/ActionTile"
+                    android:layout_marginTop="12dp"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/files"
+                        android:textColor="@color/ink"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/files_desc"
+                        android:textColor="@color/muted"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/tileTest"
+                    style="@style/ActionTile"
+                    android:layout_marginTop="12dp"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/test_apps"
+                        android:textColor="@color/ink"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/test_apps_desc"
                         android:textColor="@color/muted"
                         android:textSize="13sp" />
                 </LinearLayout>
