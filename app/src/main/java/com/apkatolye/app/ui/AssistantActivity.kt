@@ -31,7 +31,6 @@ import com.apkatolye.app.databinding.ActivityAssistantBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.Locale
 
 class AssistantActivity : AppCompatActivity() {
 
@@ -73,18 +72,24 @@ class AssistantActivity : AppCompatActivity() {
         binding.chatList.adapter = adapter
 
         appendBot(
-            "Merhaba. Ben senin elin-kolunum.\n\n" +
-                "APK seçtikten sonra örneğin söyle:\n" +
-                "«logoyu değiştir»\n" +
-                "«adını Gece Modu yap»\n" +
-                "«yeniden paketle»"
+            "Merhaba — artık kodu da doğrudan yeniden yazabilirim.\n\n" +
+                "Örnekler:\n" +
+                "• kodu yeniden yaz MainActivity\n" +
+                "• dosya yaz smali/.../Foo.smali  (sonra kodu yapıştır)\n" +
+                "• sınıf bul Login\n" +
+                "• yapay zekâ ile: başlık metnini değiştir\n" +
+                "• logoyu değiştir / yeniden paketle\n\n" +
+                "Serbest cümle için «API» ile Gemini anahtarı kaydet."
         )
 
         binding.btnSend.setOnClickListener { sendInput() }
         binding.btnMic.setOnClickListener { ensureMicAndListen() }
         binding.chipLogo.setOnClickListener { submit("logoyu değiştir") }
+        binding.chipRewrite.setOnClickListener { submit("kodu yeniden yaz") }
+        binding.chipAi.setOnClickListener { promptAi() }
         binding.chipRename.setOnClickListener { promptRename() }
         binding.chipRebuild.setOnClickListener { submit("yeniden paketle") }
+        binding.chipApi.setOnClickListener { promptApiKey() }
         binding.chipPickImage.setOnClickListener { pickImage.launch("image/*") }
 
         binding.input.setOnEditorActionListener { _, _, _ ->
@@ -109,10 +114,12 @@ class AssistantActivity : AppCompatActivity() {
     private fun submit(text: String) {
         appendUser(text)
         binding.btnSend.isEnabled = false
+        binding.hint.text = "Çalışıyor…"
         lifecycleScope.launch {
             val reply = withContext(Dispatchers.IO) { engine.handle(text) }
             applyReply(reply)
             binding.btnSend.isEnabled = true
+            binding.hint.text = "Söyle veya yaz — kodu da yeniden yazabilirim"
         }
     }
 
@@ -128,8 +135,10 @@ class AssistantActivity : AppCompatActivity() {
 
     private fun applyReply(reply: AssistantReply) {
         appendBot(reply.message)
+        if (reply.askApiKey) {
+            binding.chatList.postDelayed({ promptApiKey() }, 300)
+        }
         if (reply.openImagePicker || reply.pending == PendingAction.WAITING_LOGO_IMAGE) {
-            // Slight delay so user sees the message first
             binding.chatList.postDelayed({ pickImage.launch("image/*") }, 350)
         }
         if (reply.openFiles) {
@@ -155,11 +164,61 @@ class AssistantActivity : AppCompatActivity() {
             setPadding(48, 32, 48, 32)
         }
         AlertDialog.Builder(this)
-            .setTitle("Uygulama adını değiştir")
+            .setTitle("Uygulama adı")
             .setView(input)
             .setPositiveButton("Uygula") { _, _ ->
                 val name = input.text?.toString()?.trim().orEmpty()
                 if (name.isNotEmpty()) submit("adını $name yap")
+            }
+            .setNegativeButton("İptal", null)
+            .show()
+    }
+
+    private fun promptAi() {
+        val input = android.widget.EditText(this).apply {
+            hint = "Ne değişsin? (serbest Türkçe)"
+            minLines = 3
+            setPadding(48, 32, 48, 32)
+        }
+        AlertDialog.Builder(this)
+            .setTitle("YZ ile düzenle")
+            .setMessage(
+                if (engine.hasApiKey()) "Talimatını yaz — Gemini dosya yamaları üretecek."
+                else "Önce API anahtarı kaydetmen gerekiyor."
+            )
+            .setView(input)
+            .setPositiveButton("Gönder") { _, _ ->
+                if (!engine.hasApiKey()) {
+                    promptApiKey()
+                    return@setPositiveButton
+                }
+                val text = input.text?.toString()?.trim().orEmpty()
+                if (text.isNotEmpty()) submit("yapay zekâ ile: $text")
+            }
+            .setNeutralButton("API anahtarı") { _, _ -> promptApiKey() }
+            .setNegativeButton("İptal", null)
+            .show()
+    }
+
+    private fun promptApiKey() {
+        val input = android.widget.EditText(this).apply {
+            hint = "Gemini API key"
+            setText("")
+            setPadding(48, 32, 48, 32)
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Gemini API anahtarı")
+            .setMessage("https://aistudio.google.com/apikey adresinden ücretsiz alabilirsin. Anahtar cihazda saklanır.")
+            .setView(input)
+            .setPositiveButton("Kaydet") { _, _ ->
+                val key = input.text?.toString()?.trim().orEmpty()
+                engine.setApiKey(key.ifBlank { null })
+                appendBot(
+                    if (key.isBlank()) "API anahtarı silindi."
+                    else "API anahtarı kaydedildi. Artık serbest cümleyle kod değiştirebilirsin."
+                )
             }
             .setNegativeButton("İptal", null)
             .show()
@@ -204,12 +263,8 @@ class AssistantActivity : AppCompatActivity() {
                         ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                         ?.firstOrNull()
                         ?.trim()
-                    if (spoken.isNullOrEmpty()) {
-                        appendBot("Bir şey duyulmadı.")
-                    } else {
-                        // Remove the temporary "Dinliyorum" if last bot msg
-                        submit(spoken)
-                    }
+                    if (spoken.isNullOrEmpty()) appendBot("Bir şey duyulmadı.")
+                    else submit(spoken)
                 }
 
                 override fun onPartialResults(partialResults: Bundle?) {}
@@ -220,7 +275,6 @@ class AssistantActivity : AppCompatActivity() {
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, "tr-TR")
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
         }
         speechRecognizer?.startListening(intent)
     }

@@ -55,7 +55,25 @@
                     style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Logo değiştir"
+                    android:text="Logo"
+                    android:textAllCaps="false"
+                    android:textColor="@color/teal" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/chipRewrite"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Kod yaz"
+                    android:textAllCaps="false"
+                    android:textColor="@color/teal" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/chipAi"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="YZ ile düzenle"
                     android:textAllCaps="false"
                     android:textColor="@color/teal" />
 
@@ -64,7 +82,7 @@
                     style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Ad değiştir"
+                    android:text="Ad"
                     android:textAllCaps="false"
                     android:textColor="@color/teal" />
 
@@ -73,16 +91,25 @@
                     style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Yeniden paketle"
+                    android:text="Paketle"
                     android:textAllCaps="false"
                     android:textColor="@color/teal" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/chipApi"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="API"
+                    android:textAllCaps="false"
+                    android:textColor="@color/amber" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/chipPickImage"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Görsel seç"
+                    android:text="Görsel"
                     android:textAllCaps="false"
                     android:textColor="@color/amber" />
             </LinearLayout>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">APK Atölye</string>
-    <string name="tagline">Söyle, ben değiştireyim — kendi APK’larında asistanın olsun</string>
+    <string name="tagline">Söyle, ben kodu da yeniden yazayım — asistanın elin-kolun olsun</string>
     <string name="disclaimer">Yalnızca sahip olduğunuz veya analiz izniniz olan APK dosyaları için kullanın. Üçüncü taraf uygulamaları kırmak, lisans atlatmak veya yetkisiz değiştirmek yasal değildir.</string>
     <string name="select_apk">APK seç (dosya seçici)</string>
     <string name="analyze">Analiz et</string>
@@ -14,7 +14,7 @@
     <string name="test_apps">Uygulama testi</string>
     <string name="test_apps_desc">Yüklü uygulamaları aç veya APK kurulumunu dene</string>
     <string name="assistant">Asistan</string>
-    <string name="assistant_desc">Söyle, ben değiştireyim — logo, ad, metin, paketle</string>
+    <string name="assistant_desc">Söyle — logo, ad, smali kod yeniden yazma, YZ ile düzenleme</string>
     <string name="no_apk">Henüz APK seçilmedi</string>
     <string name="working">İşleniyor…</string>
     <string name="done">Tamamlandı</string>
