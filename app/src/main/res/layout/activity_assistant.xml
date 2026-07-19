@@ -15,12 +15,42 @@
         app:title="Asistan"
         app:titleTextColor="@color/ink" />
 
+    <LinearLayout
+        android:id="@+id/briefPanel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="12dp"
+        android:background="@drawable/bg_status"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="ARKA PLAN ODAK"
+            android:textColor="@color/amber_soft"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.08" />
+
+        <TextView
+            android:id="@+id/briefText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="Seni dinliyorum — söylediklerin burada toplanacak."
+            android:textColor="@color/white"
+            android:textSize="13sp"
+            android:lineSpacingMultiplier="1.25" />
+    </LinearLayout>
+
     <TextView
         android:id="@+id/hint"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
-        android:text="Söyle, ben APK üzerinde işlem yapayım. Örn: logoyu değiştir"
+        android:layout_marginTop="8dp"
+        android:text="Serbest konuş. Her cümlen not alınır; «Uygula» ile hepsini işlerim."
         android:textColor="@color/muted"
         android:textSize="13sp" />
 
@@ -51,47 +81,29 @@
                 android:orientation="horizontal">
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/chipLogo"
+                    android:id="@+id/chipListen"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Logo"
+                    android:text="Sürekli dinle"
                     android:textAllCaps="false"
                     android:textColor="@color/teal" />
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/chipRewrite"
+                    android:id="@+id/chipApply"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Kod yaz"
+                    android:text="Uygula"
                     android:textAllCaps="false"
-                    android:textColor="@color/teal" />
+                    android:textColor="@color/amber" />
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/chipAi"
+                    android:id="@+id/chipBrief"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="YZ ile düzenle"
-                    android:textAllCaps="false"
-                    android:textColor="@color/teal" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/chipRename"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Ad"
-                    android:textAllCaps="false"
-                    android:textColor="@color/teal" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/chipRebuild"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Paketle"
+                    android:text="Özet"
                     android:textAllCaps="false"
                     android:textColor="@color/teal" />
 
@@ -111,7 +123,16 @@
                     android:layout_height="wrap_content"
                     android:text="Görsel"
                     android:textAllCaps="false"
-                    android:textColor="@color/amber" />
+                    android:textColor="@color/teal" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/chipRebuild"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Paketle"
+                    android:textAllCaps="false"
+                    android:textColor="@color/teal" />
             </LinearLayout>
         </HorizontalScrollView>
 
@@ -127,9 +148,9 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:background="@android:color/transparent"
-                android:hint="Komutunu yaz veya söyle…"
+                android:hint="Doğal konuş — her şeyini dinliyorum…"
                 android:inputType="textCapSentences|textMultiLine"
-                android:maxLines="4"
+                android:maxLines="5"
                 android:padding="8dp"
                 android:textColor="@color/ink"
                 android:textColorHint="@color/muted"

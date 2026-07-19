@@ -12,15 +12,15 @@ import java.nio.charset.StandardCharsets
 
 data class CodePatch(
     val path: String,
-    val action: String, // write | replace | delete
+    val action: String,
     val content: String? = null,
     val old: String? = null,
     val new: String? = null
 )
 
 /**
- * Optional Gemini client. User provides API key in the assistant settings.
- * Used to turn free-form Turkish instructions into concrete file patches.
+ * Cursor-style Gemini agent: listens to full conversation, consolidates goals,
+ * then returns patches + local actions.
  */
 class GeminiClient(private val context: Context) {
 
@@ -39,87 +39,129 @@ class GeminiClient(private val context: Context) {
             .apply()
     }
 
-    fun planPatches(
-        instruction: String,
+    fun think(
+        latestUserMessage: String,
+        memory: ConversationMemory,
         workspaceSummary: String,
         focusFiles: Map<String, String>
-    ): Pair<String, List<CodePatch>> {
+    ): AgentDecision {
         val apiKey = getApiKey() ?: error("API anahtarı yok")
 
         val focusBlock = buildString {
-            focusFiles.entries.take(6).forEach { (path, content) ->
-                val clipped = if (content.length > 12_000) content.take(12_000) + "\n…(kısaltıldı)" else content
+            focusFiles.entries.take(8).forEach { (path, content) ->
+                val clipped = if (content.length > 10_000) content.take(10_000) + "\n…(kısaltıldı)" else content
                 appendLine("### FILE: $path")
                 appendLine(clipped)
                 appendLine()
             }
         }
 
-        val prompt = """
-Sen bir APK / Android kaynak asistanısın. Kullanıcı kendi uygulamasını düzenliyor.
-Görevin: talimatı uygula ve SADECE geçerli JSON döndür.
+        val system = """
+Sen Cursor gibi çalışan bir APK düzenleme ajanısın.
+Kullanıcının söylediği HER şeye odaklan. Hiçbir cümleyi unutma.
+Arka planda sürekli bir "brief" (hedef özeti) tut ve güncelle.
 
-Kurallar:
-- Yalnızca çıkarılan APK içindeki metin/smali/xml dosyalarını düzenle.
-- Zararlı yazılım, lisans kırma, ödeme atlatma üretme.
-- Yanıtın SADECE şu JSON olsun (markdown yok):
+Davranış:
+1) Kullanıcının tüm notlarını ve son mesajı birleştir.
+2) Ne istediğini netleştir; eksikse kısa soru sor ama mümkünse uygula.
+3) Yapabileceğin dosya değişikliklerini patches olarak ver.
+4) Gerekirse local_actions kullan: extract, rebuild, open_files, open_test, pick_image
+5) Zararlı yazılım / lisans kırma / ödeme atlatma üretme. Kullanıcı kendi uygulamasını düzenliyor.
+
+SADECE şu JSON'u döndür (markdown yok):
 {
-  "message": "kısa Türkçe özet",
+  "message": "kullanıcıya Türkçe, net cevap",
+  "brief": "şimdiye kadar istenenlerin güncel özeti (madde madde)",
+  "plan": "sıradaki adımlar",
+  "focus_paths": ["ilgili/dosya.smali"],
+  "local_actions": ["rebuild"],
+  "listen_more": false,
   "patches": [
-    {"action":"write","path":"smali/.../Foo.smali","content":"...tüm dosya..."},
-    {"action":"replace","path":"res/values/strings.xml","old":"...","new":"..."},
-    {"action":"delete","path":"path/to/file"}
+    {"action":"write","path":"...","content":"..."},
+    {"action":"replace","path":"...","old":"...","new":"..."},
+    {"action":"delete","path":"..."}
   ]
 }
+""".trimIndent()
 
-Çalışma alanı özeti:
+        val userPrompt = """
+Güncel brief:
+${memory.brief.ifBlank { "(henüz yok)" }}
+
+Kullanıcının biriken tüm notları:
+${memory.allUserNotes()}
+
+Son konuşma:
+${memory.recentTranscript(20)}
+
+Çalışma alanı:
 $workspaceSummary
 
-Odak dosyalar:
+Odak dosya içerikleri:
 $focusBlock
 
-Kullanıcı talimatı:
-$instruction
+SON KULLANICI MESAJI (buna özellikle odaklan):
+$latestUserMessage
 """.trimIndent()
 
         val body = JSONObject()
             .put(
+                "system_instruction",
+                JSONObject().put(
+                    "parts",
+                    JSONArray().put(JSONObject().put("text", system))
+                )
+            )
+            .put(
                 "contents",
                 JSONArray().put(
-                    JSONObject().put(
-                        "parts",
-                        JSONArray().put(JSONObject().put("text", prompt))
-                    )
+                    JSONObject()
+                        .put("role", "user")
+                        .put("parts", JSONArray().put(JSONObject().put("text", userPrompt)))
                 )
             )
             .put(
                 "generationConfig",
                 JSONObject()
-                    .put("temperature", 0.2)
+                    .put("temperature", 0.25)
                     .put("maxOutputTokens", 8192)
             )
 
+        val models = listOf(
+            "gemini-2.0-flash",
+            "gemini-2.0-flash-lite",
+            "gemini-1.5-flash"
+        )
+        var lastError: Exception? = null
+        for (model in models) {
+            try {
+                val raw = post(apiKey, model, body.toString())
+                val text = extractModelText(raw)
+                return parseDecision(text)
+            } catch (e: Exception) {
+                lastError = e
+            }
+        }
+        throw lastError ?: error("Gemini yanıt vermedi")
+    }
+
+    private fun post(apiKey: String, model: String, jsonBody: String): String {
         val url = URL(
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$apiKey"
+            "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$apiKey"
         )
         val conn = (url.openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             connectTimeout = 45_000
-            readTimeout = 90_000
+            readTimeout = 120_000
             doOutput = true
             setRequestProperty("Content-Type", "application/json; charset=utf-8")
         }
-
-        OutputStreamWriter(conn.outputStream, StandardCharsets.UTF_8).use { it.write(body.toString()) }
+        OutputStreamWriter(conn.outputStream, StandardCharsets.UTF_8).use { it.write(jsonBody) }
         val code = conn.responseCode
         val stream = if (code in 200..299) conn.inputStream else conn.errorStream
         val raw = BufferedReader(InputStreamReader(stream, StandardCharsets.UTF_8)).use { it.readText() }
-        if (code !in 200..299) {
-            error("Gemini hata ($code): ${raw.take(400)}")
-        }
-
-        val text = extractModelText(raw)
-        return parsePatches(text)
+        if (code !in 200..299) error("Gemini ($model) $code: ${raw.take(500)}")
+        return raw
     }
 
     private fun extractModelText(raw: String): String {
@@ -132,42 +174,56 @@ $instruction
         for (i in 0 until parts.length()) {
             sb.append(parts.getJSONObject(i).optString("text"))
         }
-        return sb.toString().trim()
+        val text = sb.toString().trim()
+        if (text.isEmpty()) error("Gemini boş metin")
+        return text
     }
 
-    private fun parsePatches(modelText: String): Pair<String, List<CodePatch>> {
+    private fun parseDecision(modelText: String): AgentDecision {
         var jsonText = modelText.trim()
         if (jsonText.startsWith("```")) {
             jsonText = jsonText
-                .removePrefix("```json")
-                .removePrefix("```JSON")
-                .removePrefix("```")
-                .removeSuffix("```")
-                .trim()
+                .removePrefix("```json").removePrefix("```JSON").removePrefix("```")
+                .removeSuffix("```").trim()
         }
-        // Try to find outermost JSON object
         val start = jsonText.indexOf('{')
         val end = jsonText.lastIndexOf('}')
-        if (start >= 0 && end > start) {
-            jsonText = jsonText.substring(start, end + 1)
-        }
+        if (start >= 0 && end > start) jsonText = jsonText.substring(start, end + 1)
 
         val obj = JSONObject(jsonText)
-        val message = obj.optString("message", "Değişiklikler hazır")
-        val arr = obj.optJSONArray("patches") ?: JSONArray()
         val patches = mutableListOf<CodePatch>()
+        val arr = obj.optJSONArray("patches") ?: JSONArray()
         for (i in 0 until arr.length()) {
             val p = arr.getJSONObject(i)
             patches += CodePatch(
                 path = p.getString("path"),
                 action = p.optString("action", "write"),
-                content = if (p.has("content") && !p.isNull("content")) p.getString("content") else null,
-                old = if (p.has("old") && !p.isNull("old")) p.getString("old") else null,
-                new = if (p.has("new") && !p.isNull("new")) p.getString("new") else null
+                content = p.stringOrNull("content"),
+                old = p.stringOrNull("old"),
+                new = p.stringOrNull("new")
             )
         }
-        return message to patches
+        val actions = mutableListOf<String>()
+        val la = obj.optJSONArray("local_actions") ?: JSONArray()
+        for (i in 0 until la.length()) actions += la.getString(i)
+
+        val focus = mutableListOf<String>()
+        val fp = obj.optJSONArray("focus_paths") ?: JSONArray()
+        for (i in 0 until fp.length()) focus += fp.getString(i)
+
+        return AgentDecision(
+            message = obj.optString("message", "Tamam, üzerinde çalışıyorum."),
+            brief = obj.optString("brief", ""),
+            plan = obj.optString("plan", ""),
+            patches = patches,
+            localActions = actions,
+            focusPaths = focus,
+            listenMore = obj.optBoolean("listen_more", false)
+        )
     }
+
+    private fun JSONObject.stringOrNull(key: String): String? =
+        if (has(key) && !isNull(key)) getString(key) else null
 
     companion object {
         private const val PREFS = "apk_atolye_ai"

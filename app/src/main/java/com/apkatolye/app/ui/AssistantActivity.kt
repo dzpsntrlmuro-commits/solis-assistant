@@ -5,6 +5,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -39,6 +41,10 @@ class AssistantActivity : AppCompatActivity() {
     private val messages = mutableListOf<ChatMessage>()
     private lateinit var adapter: ChatAdapter
     private var speechRecognizer: SpeechRecognizer? = null
+    private var continuousListen = false
+    private val speechBuffer = StringBuilder()
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var flushRunnable: Runnable? = null
 
     private val pickImage = registerForActivityResult(
         ActivityResultContracts.GetContent()
@@ -63,6 +69,7 @@ class AssistantActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         engine = AssistantEngine(this)
+        refreshBrief()
 
         binding.toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material)
         binding.toolbar.setNavigationOnClickListener { finish() }
@@ -72,59 +79,79 @@ class AssistantActivity : AppCompatActivity() {
         binding.chatList.adapter = adapter
 
         appendBot(
-            "Merhaba — artık kodu da doğrudan yeniden yazabilirim.\n\n" +
-                "Örnekler:\n" +
-                "• kodu yeniden yaz MainActivity\n" +
-                "• dosya yaz smali/.../Foo.smali  (sonra kodu yapıştır)\n" +
-                "• sınıf bul Login\n" +
-                "• yapay zekâ ile: başlık metnini değiştir\n" +
-                "• logoyu değiştir / yeniden paketle\n\n" +
-                "Serbest cümle için «API» ile Gemini anahtarı kaydet."
+            "Seni gerçekten dinliyorum.\n\n" +
+                "• Serbest konuş veya yaz — her cümlen arka planda toplanır\n" +
+                "• «Sürekli dinle» açıkken ara vermeden konuş\n" +
+                "• «Uygula» deyince biriken tüm isteklerini işlerim\n\n" +
+                if (engine.hasApiKey()) "API anahtarı hazır — Cursor gibi odaklanabilirim."
+                else "Önce «API» ile Gemini anahtarı kaydet; sonra doğal konuş."
         )
 
-        binding.btnSend.setOnClickListener { sendInput() }
+        if (!engine.hasApiKey()) {
+            binding.chatList.postDelayed({ promptApiKey(force = false) }, 600)
+        }
+
+        binding.btnSend.setOnClickListener { sendInput(finalize = true) }
         binding.btnMic.setOnClickListener { ensureMicAndListen() }
-        binding.chipLogo.setOnClickListener { submit("logoyu değiştir") }
-        binding.chipRewrite.setOnClickListener { submit("kodu yeniden yaz") }
-        binding.chipAi.setOnClickListener { promptAi() }
-        binding.chipRename.setOnClickListener { promptRename() }
-        binding.chipRebuild.setOnClickListener { submit("yeniden paketle") }
-        binding.chipApi.setOnClickListener { promptApiKey() }
+        binding.chipListen.setOnClickListener { toggleContinuous() }
+        binding.chipApply.setOnClickListener { submit("uygula", finalize = true) }
+        binding.chipBrief.setOnClickListener { submit("özet", finalize = true) }
+        binding.chipApi.setOnClickListener { promptApiKey(force = true) }
         binding.chipPickImage.setOnClickListener { pickImage.launch("image/*") }
+        binding.chipRebuild.setOnClickListener { submit("yeniden paketle", finalize = true) }
 
         binding.input.setOnEditorActionListener { _, _, _ ->
-            sendInput()
+            sendInput(finalize = true)
             true
         }
     }
 
     override fun onDestroy() {
+        continuousListen = false
+        flushRunnable?.let { mainHandler.removeCallbacks(it) }
         speechRecognizer?.destroy()
         speechRecognizer = null
         super.onDestroy()
     }
 
-    private fun sendInput() {
+    private fun toggleContinuous() {
+        continuousListen = !continuousListen
+        binding.chipListen.text = if (continuousListen) "Dinleme AÇIK" else "Sürekli dinle"
+        binding.chipListen.setTextColor(
+            ContextCompat.getColor(this, if (continuousListen) R.color.amber else R.color.teal)
+        )
+        if (continuousListen) {
+            appendBot("Sürekli dinleme açık. Konuş — ara verdiğinde toparlayıp not alacağım.")
+            ensureMicAndListen()
+        } else {
+            appendBot("Sürekli dinleme kapandı.")
+            speechRecognizer?.stopListening()
+        }
+    }
+
+    private fun sendInput(finalize: Boolean) {
         val text = binding.input.text?.toString().orEmpty().trim()
         if (text.isEmpty()) return
         binding.input.setText("")
-        submit(text)
+        submit(text, finalize)
     }
 
-    private fun submit(text: String) {
+    private fun submit(text: String, finalize: Boolean) {
         appendUser(text)
         binding.btnSend.isEnabled = false
-        binding.hint.text = "Çalışıyor…"
+        binding.hint.text = if (finalize) "Odaklanıp işliyorum…" else "Not alıyorum…"
         lifecycleScope.launch {
-            val reply = withContext(Dispatchers.IO) { engine.handle(text) }
+            val reply = withContext(Dispatchers.IO) {
+                engine.handle(text, finalize = finalize)
+            }
             applyReply(reply)
             binding.btnSend.isEnabled = true
-            binding.hint.text = "Söyle veya yaz — kodu da yeniden yazabilirim"
+            binding.hint.text = "Serbest konuş. Her cümlen not alınır; «Uygula» ile hepsini işlerim."
         }
     }
 
     private fun runLogo(uri: Uri) {
-        appendUser("(yeni logo görseli seçildi)")
+        appendUser("(logo görseli)")
         binding.btnSend.isEnabled = false
         lifecycleScope.launch {
             val reply = withContext(Dispatchers.IO) { engine.applyLogoFromUri(uri) }
@@ -135,8 +162,9 @@ class AssistantActivity : AppCompatActivity() {
 
     private fun applyReply(reply: AssistantReply) {
         appendBot(reply.message)
+        refreshBrief(reply.brief.ifBlank { engine.currentBrief() }, reply.plan)
         if (reply.askApiKey) {
-            binding.chatList.postDelayed({ promptApiKey() }, 300)
+            binding.chatList.postDelayed({ promptApiKey(force = false) }, 400)
         }
         if (reply.openImagePicker || reply.pending == PendingAction.WAITING_LOGO_IMAGE) {
             binding.chatList.postDelayed({ pickImage.launch("image/*") }, 350)
@@ -144,83 +172,59 @@ class AssistantActivity : AppCompatActivity() {
         if (reply.openFiles) {
             binding.chatList.postDelayed({
                 startActivity(Intent(this, FilesActivity::class.java))
-            }, 500)
+            }, 450)
         }
         if (reply.openTest) {
             binding.chatList.postDelayed({
                 startActivity(Intent(this, TestActivity::class.java))
-            }, 500)
+            }, 450)
         }
         if (reply.openRebuild) {
             binding.chatList.postDelayed({
                 startActivity(Intent(this, RebuildActivity::class.java))
+            }, 450)
+        }
+        if (reply.keepListening || continuousListen) {
+            binding.chatList.postDelayed({
+                if (continuousListen) startListening()
             }, 500)
         }
     }
 
-    private fun promptRename() {
-        val input = android.widget.EditText(this).apply {
-            hint = "Yeni uygulama adı"
-            setPadding(48, 32, 48, 32)
-        }
-        AlertDialog.Builder(this)
-            .setTitle("Uygulama adı")
-            .setView(input)
-            .setPositiveButton("Uygula") { _, _ ->
-                val name = input.text?.toString()?.trim().orEmpty()
-                if (name.isNotEmpty()) submit("adını $name yap")
+    private fun refreshBrief(brief: String = engine.currentBrief(), plan: String = engine.currentPlan()) {
+        binding.briefText.text = buildString {
+            append(brief.ifBlank { "Seni dinliyorum — söylediklerin burada toplanacak." })
+            if (plan.isNotBlank()) {
+                append("\n\nPlan: ")
+                append(plan)
             }
-            .setNegativeButton("İptal", null)
-            .show()
+        }
     }
 
-    private fun promptAi() {
-        val input = android.widget.EditText(this).apply {
-            hint = "Ne değişsin? (serbest Türkçe)"
-            minLines = 3
-            setPadding(48, 32, 48, 32)
-        }
-        AlertDialog.Builder(this)
-            .setTitle("YZ ile düzenle")
-            .setMessage(
-                if (engine.hasApiKey()) "Talimatını yaz — Gemini dosya yamaları üretecek."
-                else "Önce API anahtarı kaydetmen gerekiyor."
-            )
-            .setView(input)
-            .setPositiveButton("Gönder") { _, _ ->
-                if (!engine.hasApiKey()) {
-                    promptApiKey()
-                    return@setPositiveButton
-                }
-                val text = input.text?.toString()?.trim().orEmpty()
-                if (text.isNotEmpty()) submit("yapay zekâ ile: $text")
-            }
-            .setNeutralButton("API anahtarı") { _, _ -> promptApiKey() }
-            .setNegativeButton("İptal", null)
-            .show()
-    }
-
-    private fun promptApiKey() {
+    private fun promptApiKey(force: Boolean) {
+        if (!force && engine.hasApiKey()) return
         val input = android.widget.EditText(this).apply {
             hint = "Gemini API key"
-            setText("")
             setPadding(48, 32, 48, 32)
             inputType = android.text.InputType.TYPE_CLASS_TEXT or
                 android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
         }
         AlertDialog.Builder(this)
-            .setTitle("Gemini API anahtarı")
-            .setMessage("https://aistudio.google.com/apikey adresinden ücretsiz alabilirsin. Anahtar cihazda saklanır.")
+            .setTitle("Cursor gibi dinlemem için")
+            .setMessage(
+                "Gemini API anahtarı kaydet.\nhttps://aistudio.google.com/apikey\n\n" +
+                    "Sonra serbest konuş; her cümleni biriktirip uygulayacağım."
+            )
             .setView(input)
             .setPositiveButton("Kaydet") { _, _ ->
                 val key = input.text?.toString()?.trim().orEmpty()
                 engine.setApiKey(key.ifBlank { null })
                 appendBot(
                     if (key.isBlank()) "API anahtarı silindi."
-                    else "API anahtarı kaydedildi. Artık serbest cümleyle kod değiştirebilirsin."
+                    else "Tamam. Artık dediklerinin hepsine odaklanıp arka planda toparlayacağım."
                 )
             }
-            .setNegativeButton("İptal", null)
+            .setNegativeButton(if (force) "İptal" else "Sonra", null)
             .show()
     }
 
@@ -242,7 +246,7 @@ class AssistantActivity : AppCompatActivity() {
             setRecognitionListener(object : RecognitionListener {
                 override fun onReadyForSpeech(params: Bundle?) {
                     binding.btnMic.text = "…"
-                    appendBot("Dinliyorum…")
+                    binding.hint.text = "Dinliyorum — konuş"
                 }
 
                 override fun onBeginningOfSpeech() {}
@@ -254,7 +258,14 @@ class AssistantActivity : AppCompatActivity() {
 
                 override fun onError(error: Int) {
                     binding.btnMic.text = "Ses"
-                    appendBot("Sesi anlayamadım, tekrar dene veya yaz.")
+                    if (continuousListen) {
+                        // Soft retry without spamming chat
+                        mainHandler.postDelayed({
+                            if (continuousListen) startListening()
+                        }, 800)
+                    } else if (error != SpeechRecognizer.ERROR_CLIENT) {
+                        appendBot("Sesi kaçırdım — tekrar söyle veya yaz.")
+                    }
                 }
 
                 override fun onResults(results: Bundle?) {
@@ -263,8 +274,34 @@ class AssistantActivity : AppCompatActivity() {
                         ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                         ?.firstOrNull()
                         ?.trim()
-                    if (spoken.isNullOrEmpty()) appendBot("Bir şey duyulmadı.")
-                    else submit(spoken)
+                        .orEmpty()
+                    if (spoken.isEmpty()) {
+                        if (continuousListen) {
+                            mainHandler.postDelayed({ startListening() }, 400)
+                        }
+                        return
+                    }
+
+                    if (continuousListen) {
+                        // Buffer speech chunks; flush after short pause as finalize=false notes,
+                        // user taps Uygula for full action — OR auto-note each chunk
+                        if (speechBuffer.isNotEmpty()) speechBuffer.append(' ')
+                        speechBuffer.append(spoken)
+                        appendUser("🎤 $spoken")
+                        // Immediately note without full AI act
+                        lifecycleScope.launch {
+                            val reply = withContext(Dispatchers.IO) {
+                                engine.handle(spoken, finalize = false)
+                            }
+                            refreshBrief(reply.brief)
+                            scheduleSpeechFlush()
+                        }
+                        mainHandler.postDelayed({
+                            if (continuousListen) startListening()
+                        }, 450)
+                    } else {
+                        submit(spoken, finalize = true)
+                    }
                 }
 
                 override fun onPartialResults(partialResults: Bundle?) {}
@@ -275,9 +312,49 @@ class AssistantActivity : AppCompatActivity() {
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, "tr-TR")
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
         }
         speechRecognizer?.startListening(intent)
     }
+
+    private fun scheduleSpeechFlush() {
+        flushRunnable?.let { mainHandler.removeCallbacks(it) }
+        flushRunnable = Runnable {
+            val chunk = speechBuffer.toString().trim()
+            speechBuffer.clear()
+            if (chunk.isNotEmpty() && engine.hasApiKey()) {
+                // After a pause in continuous mode, do a light think to update brief/plan
+                lifecycleScope.launch {
+                    binding.hint.text = "Arka planda toparlıyorum…"
+                    val reply = withContext(Dispatchers.IO) {
+                        engine.handle(
+                            "Kullanıcı konuşuyor. Şu ana kadar söylenenleri brief'te birleştir, " +
+                                "henüz büyük değişiklik yapma unless açıkça istendi. Dinlemeye devam. Son parça: $chunk",
+                            finalize = true
+                        )
+                    }
+                    // Don't spam full message if it's just consolidation — update brief always
+                    refreshBrief(reply.brief, reply.plan)
+                    if (isActionHeavy(reply)) {
+                        appendBot(reply.message)
+                    } else if (reply.brief.isNotBlank()) {
+                        appendBot("Odak güncellendi. Konuşmaya devam veya «Uygula».")
+                    }
+                    binding.hint.text = "Serbest konuş. Her cümlen not alınır; «Uygula» ile hepsini işlerim."
+                }
+            }
+        }
+        mainHandler.postDelayed(flushRunnable!!, 4500)
+    }
+
+    private fun isActionHeavy(r: AssistantReply): Boolean =
+        r.message.contains("yamalar", true) ||
+            r.message.contains("yazıldı", true) ||
+            r.message.contains("Paketledim", true) ||
+            r.message.contains("Logoyu", true) ||
+            r.message.contains("Uygulanan", true) ||
+            r.openImagePicker || r.openTest || r.openFiles
 
     private fun appendUser(text: String) {
         messages += ChatMessage(text, fromUser = true)
