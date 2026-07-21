@@ -1,13 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="bg_dark">#0B1220</color>
-    <color name="panel">#152238</color>
-    <color name="panel_soft">#1E2F4A</color>
-    <color name="accent">#22C55E</color>
-    <color name="accent_soft">#86EFAC</color>
-    <color name="amber">#F59E0B</color>
-    <color name="cream_text">#F8FAFC</color>
-    <color name="muted_text">#94A3B8</color>
+    <color name="pink_50">#FFF5F8</color>
+    <color name="pink_100">#FFE4EC</color>
+    <color name="pink_200">#FFC2D4</color>
+    <color name="pink_300">#FF9EBC</color>
+    <color name="pink_400">#FF7AA5</color>
+    <color name="pink_500">#FF5C92</color>
+    <color name="pink_600">#F23D7A</color>
+    <color name="pink_700">#D91F63</color>
+    <color name="pink_panel">#FF6B9D</color>
+    <color name="pink_panel_dark">#E84A82</color>
+    <color name="pink_sound">#FF8FB8</color>
+    <color name="cream">#FFF8FB</color>
     <color name="white">#FFFFFF</color>
-    <color name="overlay_box">#22C55E</color>
+    <color name="black">#1A1020</color>
+    <color name="text_dark">#4A2040</color>
+    <color name="text_muted">#8A5A72</color>
+    <color name="bow_red">#E91E63</color>
+    <color name="kitty_face">#FFFFFF</color>
+    <color name="kitty_outline">#2D1B2E</color>
+    <color name="icon_bg">#FFD6E7</color>
+    <color name="dock_bg">#E6FFFFFF</color>
+    <color name="scrim">#66000000</color>
 </resources>

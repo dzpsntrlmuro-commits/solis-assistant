@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="72dp"
+    android:height="78dp"
+    android:viewportWidth="72"
+    android:viewportHeight="78">
+    <!-- left ear -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M14,28 L22,6 L34,24 Z"
+        android:strokeWidth="2.2"
+        android:strokeColor="#2D1B2E" />
+    <!-- right ear -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M58,28 L50,6 L38,24 Z"
+        android:strokeWidth="2.2"
+        android:strokeColor="#2D1B2E" />
+    <!-- head / icon plate -->
+    <path
+        android:fillColor="#FFE4EC"
+        android:pathData="M10,30 h52 a10,10 0 0,1 10,10 v26 a10,10 0 0,1 -10,10 h-52 a10,10 0 0,1 -10,-10 v-26 a10,10 0 0,1 10,-10 z"
+        android:strokeWidth="2.2"
+        android:strokeColor="#2D1B2E" />
+    <!-- inner white face -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M14,34 h44 a7,7 0 0,1 7,7 v22 a7,7 0 0,1 -7,7 h-44 a7,7 0 0,1 -7,-7 v-22 a7,7 0 0,1 7,-7 z" />
+</vector>

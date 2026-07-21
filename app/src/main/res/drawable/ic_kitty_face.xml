@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+
+    <!-- left ear -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M28,48 C22,18 38,10 48,34 Z"
+        android:strokeWidth="3"
+        android:strokeColor="#2D1B2E" />
+    <!-- right ear -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M92,48 C98,18 82,10 72,34 Z"
+        android:strokeWidth="3"
+        android:strokeColor="#2D1B2E" />
+    <!-- face -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M60,28 C86,28 104,48 104,70 C104,96 84,108 60,108 C36,108 16,96 16,70 C16,48 34,28 60,28 Z"
+        android:strokeWidth="3"
+        android:strokeColor="#2D1B2E" />
+    <!-- left eye -->
+    <path
+        android:fillColor="#2D1B2E"
+        android:pathData="M42,68 a5,7 0 1,0 10,0 a5,7 0 1,0 -10,0" />
+    <!-- right eye -->
+    <path
+        android:fillColor="#2D1B2E"
+        android:pathData="M68,68 a5,7 0 1,0 10,0 a5,7 0 1,0 -10,0" />
+    <!-- nose -->
+    <path
+        android:fillColor="#FF8FB8"
+        android:pathData="M57,78 L63,78 L60,82 Z" />
+    <!-- whiskers left -->
+    <path
+        android:pathData="M18,72 L40,74 M16,80 L40,78 M20,88 L42,82"
+        android:strokeWidth="2"
+        android:strokeColor="#2D1B2E"
+        android:fillColor="#00000000" />
+    <!-- whiskers right -->
+    <path
+        android:pathData="M102,72 L80,74 M104,80 L80,78 M100,88 L78,82"
+        android:strokeWidth="2"
+        android:strokeColor="#2D1B2E"
+        android:fillColor="#00000000" />
+    <!-- bow left loop -->
+    <path
+        android:fillColor="#E91E63"
+        android:pathData="M68,34 C78,22 92,28 86,40 C80,48 70,44 68,34 Z" />
+    <!-- bow right loop -->
+    <path
+        android:fillColor="#E91E63"
+        android:pathData="M86,34 C96,22 108,30 100,42 C94,50 86,44 86,34 Z" />
+    <!-- bow center -->
+    <path
+        android:fillColor="#C2185B"
+        android:pathData="M82,36 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0" />
+</vector>
