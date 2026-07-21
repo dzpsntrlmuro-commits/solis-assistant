@@ -1,15 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">İçki Say</string>
-    <string name="tagline">Kamerayı içkilere tut, yapay zeka saysın ve sesli söylesin</string>
-    <string name="btn_count">İçkileri Say</string>
-    <string name="btn_counting">Sayılıyor…</string>
-    <string name="btn_speak">Tekrar Söyle</string>
-    <string name="btn_stop_speak">Sustur</string>
-    <string name="status_ready">Arka kamerayı içkilere tutun ve butona basın</string>
-    <string name="status_counting">Yapay zeka içkileri sayıyor…</string>
-    <string name="status_permission">Kamera izni gerekli</string>
-    <string name="status_camera_error">Kamera başlatılamadı</string>
-    <string name="result_title">Sonuç</string>
-    <string name="detail_title">Detay</string>
+    <string name="app_name">Hello Kittiy</string>
+    <string name="tagline">Pembe kedi arayüzü</string>
+    <string name="search_hint">Uygulama ara…</string>
+    <string name="panel_notifications">Bildirimler</string>
+    <string name="panel_sound">Ses</string>
+    <string name="volume_media">Medya</string>
+    <string name="volume_ring">Zil</string>
+    <string name="volume_alarm">Alarm</string>
+    <string name="no_notifications">Bildirim yok ♡</string>
+    <string name="enable_notifications">Bildirimleri görmek için izin ver</string>
+    <string name="open_notif_settings">Bildirim iznini aç</string>
+    <string name="set_as_home">Varsayılan ana ekran yap</string>
+    <string name="home_hint">Aşağıdan kaydır · Yukarıdan çek → bildirim &amp; ses</string>
+    <string name="apps_title">Uygulamalar</string>
+    <string name="clear_all">Temizle</string>
+    <string name="mute">Sessiz</string>
+    <string name="unmute">Sesli</string>
+    <string name="brightness">Parlaklık</string>
+    <string name="wallpaper_label">Hello Kittiy</string>
 </resources>
