@@ -1,8 +1,10 @@
 package com.hellokittiy.launcher.ui
 
+import android.app.AlertDialog
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.pm.ResolveInfo
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Bundle
@@ -42,6 +44,8 @@ class HomeActivity : AppCompatActivity() {
     private var panelOpen = false
     private var panelHeight = 0f
 
+    private val prefs by lazy { getSharedPreferences("kittiy", MODE_PRIVATE) }
+
     private val clockHandler = Handler(Looper.getMainLooper())
     private val clockTick = object : Runnable {
         override fun run() {
@@ -66,6 +70,19 @@ class HomeActivity : AppCompatActivity() {
         setupSearch()
         setupGestures()
         renderNotifications(sampleNotifications())
+
+        // Always behave as home launcher entry
+        if (intent?.categories?.contains(Intent.CATEGORY_HOME) == true ||
+            intent?.action == Intent.ACTION_MAIN
+        ) {
+            maybePromptDefaultLauncher()
+        }
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (panelOpen) closePanel()
     }
 
     override fun onResume() {
@@ -85,6 +102,7 @@ class HomeActivity : AppCompatActivity() {
         if (panelOpen) {
             closePanel()
         }
+        // Launcher: stay on home
     }
 
     private fun setupInsets() {
@@ -92,13 +110,13 @@ class HomeActivity : AppCompatActivity() {
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             binding.homeLayer.setPadding(
                 binding.homeLayer.paddingLeft,
-                bars.top + 8,
+                bars.top + 6,
                 binding.homeLayer.paddingRight,
-                bars.bottom + 8
+                bars.bottom + 6
             )
             binding.notificationPanel.setPadding(
                 binding.notificationPanel.paddingLeft,
-                bars.top + 12,
+                bars.top + 10,
                 binding.notificationPanel.paddingRight,
                 binding.notificationPanel.paddingBottom
             )
@@ -187,6 +205,9 @@ class HomeActivity : AppCompatActivity() {
             renderNotifications(emptyList())
         }
 
+        binding.btnVolDown.setOnClickListener { adjustVolume(-1) }
+        binding.btnVolUp.setOnClickListener { adjustVolume(+1) }
+
         binding.tileWifi.setOnClickListener {
             try {
                 startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
@@ -195,7 +216,6 @@ class HomeActivity : AppCompatActivity() {
             }
         }
         binding.tileSilent.setOnClickListener { toggleSilent() }
-        binding.btnMuteKitty.setOnClickListener { toggleSilent() }
         binding.tileLauncher.setOnClickListener { promptDefaultLauncher() }
     }
 
@@ -214,6 +234,19 @@ class HomeActivity : AppCompatActivity() {
         bind(binding.seekMedia, AudioManager.STREAM_MUSIC)
         bind(binding.seekRing, AudioManager.STREAM_RING)
         bind(binding.seekAlarm, AudioManager.STREAM_ALARM)
+    }
+
+    private fun adjustVolume(delta: Int) {
+        val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        val next = (audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) + delta)
+            .coerceIn(0, max)
+        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, next, AudioManager.FLAG_SHOW_UI)
+        binding.seekMedia.progress = next
+        Toast.makeText(
+            this,
+            if (delta < 0) getString(R.string.vol_down) else getString(R.string.vol_up),
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
     private fun syncVolumeSliders() {
@@ -269,6 +302,7 @@ class HomeActivity : AppCompatActivity() {
         }
 
         binding.pullHintBar.setOnClickListener { openPanel() }
+        binding.statusRow.setOnClickListener { openPanel() }
         binding.tvBrand.setOnLongClickListener {
             openPanel()
             true
@@ -308,7 +342,7 @@ class HomeActivity : AppCompatActivity() {
     private fun updateClock() {
         val now = Date()
         binding.tvClock.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(now)
-        binding.tvDate.text = SimpleDateFormat("EEEE, d MMMM", Locale("tr")).format(now)
+        binding.tvDate.text = SimpleDateFormat("EEE d MMM", Locale("tr")).format(now)
     }
 
     private fun launchApp(item: AppItem) {
@@ -319,11 +353,40 @@ class HomeActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
+    private fun isDefaultLauncher(): Boolean {
+        val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+        val resolve: ResolveInfo? = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
+        return resolve?.activityInfo?.packageName == packageName
+    }
+
+    private fun maybePromptDefaultLauncher() {
+        if (isDefaultLauncher()) return
+        if (prefs.getBoolean("skip_launcher_prompt", false)) return
+        AlertDialog.Builder(this)
+            .setTitle(R.string.launcher_dialog_title)
+            .setMessage(R.string.launcher_dialog_msg)
+            .setPositiveButton(R.string.launcher_dialog_ok) { _, _ ->
+                promptDefaultLauncher()
+            }
+            .setNegativeButton(R.string.launcher_dialog_later) { _, _ ->
+                prefs.edit().putBoolean("skip_launcher_prompt", true).apply()
+            }
+            .show()
+    }
+
     private fun promptDefaultLauncher() {
         try {
             startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
         } catch (_: Exception) {
-            startActivity(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))
+            try {
+                startActivity(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))
+            } catch (_: Exception) {
+                // Fallback: trigger home chooser
+                val selector = Intent(Intent.ACTION_MAIN)
+                    .addCategory(Intent.CATEGORY_HOME)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(selector)
+            }
         }
         Toast.makeText(this, R.string.launcher_hint, Toast.LENGTH_LONG).show()
     }
@@ -335,7 +398,8 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun sampleNotifications(): List<NotifItem> = listOf(
-        NotifItem("1", "Hello Kittiy", "Pembe arayüzün hazır ♡ Aşağı çekerek sesi ayarla.", packageName),
-        NotifItem("2", "Ana ekran", "Varsayılan launcher olarak ayarla ve telefonun yüzü değişsin.", packageName)
+        NotifItem("1", "Hello Kittiy", "Pembe bildirimler hazır ♡", packageName),
+        NotifItem("2", "Ses", "Ses kıs / Ses aç pembe Kitty tuşlarıyla.", packageName),
+        NotifItem("3", "Ana ekran", "Varsayılan başlatıcı yap — telefon açılınca bu arayüz gelir.", packageName)
     )
 }

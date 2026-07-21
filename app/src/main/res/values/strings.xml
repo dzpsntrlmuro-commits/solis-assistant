@@ -2,12 +2,14 @@
 <resources>
     <string name="app_name">Hello Kittiy</string>
     <string name="home_greeting">Merhaba ♡</string>
-    <string name="home_subtitle">Hello Kittiy dünyası</string>
+    <string name="home_subtitle">Ana ekran başlatıcı · Hello Kittiy</string>
     <string name="apps_title">Uygulamalar</string>
     <string name="notifications_title">Bildirimler</string>
     <string name="sound_title">Ses</string>
+    <string name="vol_down">Ses kıs</string>
+    <string name="vol_up">Ses aç</string>
     <string name="no_notifications">Henüz bildirim yok ♡</string>
-    <string name="set_default_launcher">Ana ekran olarak ayarla</string>
+    <string name="set_default_launcher">Ana ekran yap</string>
     <string name="volume_media">Medya</string>
     <string name="volume_ring">Zil</string>
     <string name="volume_alarm">Alarm</string>
@@ -22,5 +24,9 @@
     <string name="search_hint">Uygulama ara…</string>
     <string name="clear_all">Temizle</string>
     <string name="panel_hint">Aşağı çek · bildirim &amp; ses</string>
-    <string name="launcher_hint">Kurulumdan sonra bu uygulamayı varsayılan ana ekran yap.</string>
+    <string name="launcher_hint">Hello Kittiy’i varsayılan ana ekran olarak seç — telefonu açınca bu arayüz gelir.</string>
+    <string name="launcher_dialog_title">Ana ekran başlatıcı</string>
+    <string name="launcher_dialog_msg">Telefonu her açtığında Hello Kittiy arayüzü gelsin mi? Varsayılan ana ekran olarak ayarla.</string>
+    <string name="launcher_dialog_ok">Ayarla</string>
+    <string name="launcher_dialog_later">Sonra</string>
 </resources>

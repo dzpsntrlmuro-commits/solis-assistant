@@ -8,34 +8,20 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:background="@drawable/bg_sound_card"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/bg_notif_pink"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="12dp"
-        android:paddingTop="14dp"
-        android:paddingEnd="12dp"
+        android:paddingStart="10dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="10dp"
         android:paddingBottom="12dp">
 
-        <FrameLayout
-            android:layout_width="44dp"
-            android:layout_height="48dp">
-
-            <ImageView
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:contentDescription="@null"
-                android:scaleType="fitXY"
-                android:src="@drawable/ic_kitty_icon_frame" />
-
-            <ImageView
-                android:layout_width="22dp"
-                android:layout_height="22dp"
-                android:layout_gravity="center_horizontal|bottom"
-                android:layout_marginBottom="8dp"
-                android:contentDescription="@null"
-                android:src="@drawable/ic_kitty_small" />
-        </FrameLayout>
+        <ImageView
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_status_kitty" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -60,16 +46,16 @@
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:maxLines="2"
-                android:textColor="#E6FFFFFF"
+                android:textColor="#F2FFFFFF"
                 android:textSize="12sp" />
         </LinearLayout>
     </LinearLayout>
 
     <ImageView
-        android:layout_width="22dp"
-        android:layout_height="17dp"
+        android:layout_width="20dp"
+        android:layout_height="15dp"
         android:layout_gravity="top|end"
-        android:layout_marginEnd="10dp"
+        android:layout_marginEnd="8dp"
         android:contentDescription="@null"
         android:src="@drawable/ic_bow" />
 </FrameLayout>

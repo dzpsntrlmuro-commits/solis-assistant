@@ -7,71 +7,84 @@
     android:background="@drawable/bg_home_wallpaper"
     android:fitsSystemWindows="true">
 
-    <!-- HOME SCREEN -->
+    <!-- LAUNCHER HOME -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/homeLayer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:paddingHorizontal="20dp"
-        android:paddingTop="12dp"
-        android:paddingBottom="16dp">
+        android:paddingHorizontal="16dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="12dp">
 
         <View
             android:id="@+id/pullHintBar"
-            android:layout_width="48dp"
-            android:layout_height="5dp"
+            android:layout_width="40dp"
+            android:layout_height="4dp"
             android:background="@drawable/bg_panel_handle"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <TextView
-            android:id="@+id/tvClock"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
-            android:fontFamily="sans-serif-light"
-            android:letterSpacing="0.04"
-            android:text="12:00"
-            android:textColor="@color/pink_700"
-            android:textSize="64sp"
-            android:textStyle="bold"
+        <!-- Status row: Hello Kitty next to clock (like top bar icon) -->
+        <LinearLayout
+            android:id="@+id/statusRow"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/bg_status_bar"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="12dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/pullHintBar" />
+            app:layout_constraintTop_toBottomOf="@id/pullHintBar">
 
-        <TextView
-            android:id="@+id/tvDate"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="@color/text_muted"
-            android:textSize="15sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvClock" />
+            <ImageView
+                android:id="@+id/imgStatusKitty"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:contentDescription="@string/app_name"
+                android:src="@drawable/ic_status_kitty" />
 
-        <ImageView
-            android:id="@+id/imgKitty"
-            android:layout_width="150dp"
-            android:layout_height="150dp"
-            android:layout_marginTop="12dp"
-            android:contentDescription="@string/app_name"
-            android:src="@drawable/ic_kitty_face"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvDate" />
+            <TextView
+                android:id="@+id/tvClock"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:text="12:00"
+                android:textColor="@color/pink_700"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvDate"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/text_muted"
+                android:textSize="12sp" />
+
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="17dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_bow" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/tvBrand"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="10dp"
             android:text="@string/app_name"
             android:textAppearance="@style/KittiyText.Brand"
-            android:textSize="30sp"
+            android:textSize="26sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/imgKitty" />
+            app:layout_constraintTop_toBottomOf="@id/statusRow" />
 
         <TextView
             android:id="@+id/tvGreeting"
@@ -79,7 +92,7 @@
             android:layout_height="wrap_content"
             android:text="@string/home_subtitle"
             android:textColor="@color/text_muted"
-            android:textSize="14sp"
+            android:textSize="13sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tvBrand" />
@@ -87,18 +100,18 @@
         <EditText
             android:id="@+id/etSearch"
             android:layout_width="0dp"
-            android:layout_height="46dp"
-            android:layout_marginTop="16dp"
+            android:layout_height="44dp"
+            android:layout_marginTop="10dp"
             android:background="@drawable/bg_dock"
-            android:drawableStart="@drawable/ic_kitty_small"
-            android:drawablePadding="10dp"
+            android:drawableStart="@drawable/ic_status_kitty"
+            android:drawablePadding="8dp"
             android:hint="@string/search_hint"
             android:imeOptions="actionSearch"
             android:inputType="text"
-            android:paddingHorizontal="14dp"
+            android:paddingHorizontal="12dp"
             android:textColor="@color/text_dark"
             android:textColorHint="@color/text_muted"
-            android:textSize="14sp"
+            android:textSize="13sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tvGreeting" />
@@ -107,23 +120,24 @@
             android:id="@+id/rvApps"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="8dp"
             android:clipToPadding="false"
             android:overScrollMode="never"
-            android:paddingBottom="8dp"
+            android:paddingBottom="6dp"
             app:layout_constraintBottom_toTopOf="@id/dock"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/etSearch" />
 
+        <!-- Hello Kitty dock -->
         <LinearLayout
             android:id="@+id/dock"
             android:layout_width="0dp"
-            android:layout_height="72dp"
+            android:layout_height="84dp"
             android:background="@drawable/bg_dock"
             android:gravity="center"
             android:orientation="horizontal"
-            android:paddingHorizontal="8dp"
+            android:paddingHorizontal="4dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent">
@@ -131,42 +145,45 @@
             <ImageButton
                 android:id="@+id/btnDockPhone"
                 android:layout_width="0dp"
-                android:layout_height="56dp"
+                android:layout_height="64dp"
                 android:layout_weight="1"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/dock_phone"
-                android:src="@drawable/ic_dock_phone" />
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_dock_phone_kitty" />
 
             <ImageButton
                 android:id="@+id/btnDockMessages"
                 android:layout_width="0dp"
-                android:layout_height="56dp"
+                android:layout_height="64dp"
                 android:layout_weight="1"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/dock_messages"
-                android:src="@drawable/ic_dock_messages" />
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_dock_msg_kitty" />
 
             <ImageButton
                 android:id="@+id/btnDockCamera"
                 android:layout_width="0dp"
-                android:layout_height="56dp"
+                android:layout_height="64dp"
                 android:layout_weight="1"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/dock_camera"
-                android:src="@drawable/ic_dock_camera" />
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_dock_cam_kitty" />
 
             <ImageButton
                 android:id="@+id/btnDockSettings"
                 android:layout_width="0dp"
-                android:layout_height="56dp"
+                android:layout_height="64dp"
                 android:layout_weight="1"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/dock_settings"
-                android:src="@drawable/ic_dock_settings" />
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_dock_settings_kitty" />
         </LinearLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!-- SCRIM -->
     <View
         android:id="@+id/scrim"
         android:layout_width="match_parent"
@@ -176,7 +193,7 @@
         android:focusable="true"
         android:visibility="gone" />
 
-    <!-- PINK HELLO KITTY NOTIFICATION + SOUND PANEL -->
+    <!-- PANEL: cream shell, pink notifs + pink vol down/up -->
     <LinearLayout
         android:id="@+id/notificationPanel"
         android:layout_width="match_parent"
@@ -188,17 +205,15 @@
         android:orientation="vertical"
         android:paddingHorizontal="16dp"
         android:paddingTop="14dp"
-        android:paddingBottom="20dp"
-        android:translationY="-1200dp"
-        android:visibility="visible">
+        android:paddingBottom="18dp"
+        android:translationY="-1200dp">
 
         <View
             android:layout_width="44dp"
             android:layout_height="5dp"
             android:layout_gravity="center_horizontal"
-            android:background="@drawable/bg_panel_handle" />
+            android:background="@color/pink_300" />
 
-        <!-- Hello Kitty header -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -207,140 +222,126 @@
             android:orientation="horizontal">
 
             <ImageView
-                android:layout_width="52dp"
-                android:layout_height="52dp"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
                 android:contentDescription="@string/app_name"
-                android:src="@drawable/ic_kitty_face" />
+                android:src="@drawable/ic_status_kitty" />
 
-            <LinearLayout
+            <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="10dp"
+                android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/app_name"
-                    android:textColor="@color/white"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/notifications_title"
-                    android:textColor="#F2FFFFFF"
-                    android:textSize="13sp" />
-            </LinearLayout>
+                android:text="@string/app_name"
+                android:textColor="@color/pink_700"
+                android:textSize="18sp"
+                android:textStyle="bold" />
 
             <ImageView
-                android:layout_width="28dp"
-                android:layout_height="22dp"
+                android:layout_width="24dp"
+                android:layout_height="18dp"
                 android:contentDescription="@null"
                 android:src="@drawable/ic_bow" />
         </LinearLayout>
 
-        <!-- TOP PANEL KITTY TILES: wifi / mute / home -->
+        <!-- PINK volume down / volume up -->
         <LinearLayout
+            android:id="@+id/soundSection"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:gravity="center"
             android:orientation="horizontal">
 
-            <FrameLayout
-                android:id="@+id/tileWifi"
+            <LinearLayout
+                android:id="@+id/btnVolDown"
                 android:layout_width="0dp"
-                android:layout_height="72dp"
+                android:layout_height="88dp"
                 android:layout_marginEnd="8dp"
                 android:layout_weight="1"
-                android:background="@drawable/bg_quick_tile"
+                android:background="@drawable/bg_vol_pink"
                 android:clickable="true"
                 android:focusable="true"
-                android:foreground="?attr/selectableItemBackground">
+                android:foreground="?attr/selectableItemBackground"
+                android:gravity="center"
+                android:orientation="vertical">
 
                 <ImageView
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:layout_gravity="center"
-                    android:contentDescription="@string/quick_wifi"
-                    android:src="@drawable/ic_tile_wifi_kitty" />
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:contentDescription="@string/vol_down"
+                    android:src="@drawable/ic_vol_down_kitty" />
 
-                <ImageView
-                    android:layout_width="18dp"
-                    android:layout_height="14dp"
-                    android:layout_gravity="top|end"
-                    android:layout_margin="6dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_bow" />
-            </FrameLayout>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/vol_down"
+                    android:textColor="@color/white"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
 
-            <FrameLayout
-                android:id="@+id/tileSilent"
+            <LinearLayout
+                android:id="@+id/btnVolUp"
                 android:layout_width="0dp"
-                android:layout_height="72dp"
-                android:layout_marginEnd="8dp"
+                android:layout_height="88dp"
                 android:layout_weight="1"
-                android:background="@drawable/bg_quick_tile"
+                android:background="@drawable/bg_vol_pink"
                 android:clickable="true"
                 android:focusable="true"
-                android:foreground="?attr/selectableItemBackground">
+                android:foreground="?attr/selectableItemBackground"
+                android:gravity="center"
+                android:orientation="vertical">
 
                 <ImageView
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:layout_gravity="center"
-                    android:contentDescription="@string/quick_silent"
-                    android:src="@drawable/ic_tile_mute_kitty" />
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:contentDescription="@string/vol_up"
+                    android:src="@drawable/ic_vol_up_kitty" />
 
-                <ImageView
-                    android:layout_width="18dp"
-                    android:layout_height="14dp"
-                    android:layout_gravity="top|end"
-                    android:layout_margin="6dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_bow" />
-            </FrameLayout>
-
-            <FrameLayout
-                android:id="@+id/tileLauncher"
-                android:layout_width="0dp"
-                android:layout_height="72dp"
-                android:layout_weight="1"
-                android:background="@drawable/bg_quick_tile"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?attr/selectableItemBackground">
-
-                <ImageView
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:layout_gravity="center"
-                    android:contentDescription="@string/set_default_launcher"
-                    android:src="@drawable/ic_tile_home_kitty" />
-
-                <ImageView
-                    android:layout_width="18dp"
-                    android:layout_height="14dp"
-                    android:layout_gravity="top|end"
-                    android:layout_margin="6dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_bow" />
-            </FrameLayout>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/vol_up"
+                    android:textColor="@color/white"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
         </LinearLayout>
 
+        <SeekBar
+            android:id="@+id/seekMedia"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:progressBackgroundTint="@color/pink_200"
+            android:progressTint="@color/pink_500"
+            android:thumbTint="@color/pink_600" />
+
+        <!-- hidden seekers kept for sync API compatibility -->
+        <SeekBar
+            android:id="@+id/seekRing"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone" />
+
+        <SeekBar
+            android:id="@+id/seekAlarm"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone" />
+
+        <!-- PINK Hello Kitty notifications -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
+            android:layout_marginTop="12dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
             <ImageView
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
                 android:contentDescription="@string/notifications_title"
                 android:src="@drawable/ic_notif_kitty" />
 
@@ -350,25 +351,25 @@
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
                 android:text="@string/notifications_title"
-                android:textAppearance="@style/KittiyText.PanelTitle"
-                android:textSize="16sp" />
+                android:textColor="@color/pink_700"
+                android:textSize="16sp"
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/btnClearNotifs"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:background="?attr/selectableItemBackground"
                 android:padding="8dp"
                 android:text="@string/clear_all"
-                android:textColor="@color/white"
+                android:textColor="@color/pink_600"
                 android:textSize="13sp" />
         </LinearLayout>
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvNotifications"
             android:layout_width="match_parent"
-            android:layout_height="130dp"
-            android:layout_marginTop="8dp"
+            android:layout_height="140dp"
+            android:layout_marginTop="6dp"
             android:overScrollMode="never" />
 
         <TextView
@@ -377,109 +378,68 @@
             android:layout_height="70dp"
             android:gravity="center"
             android:text="@string/no_notifications"
-            android:textColor="#EEFFFFFF"
+            android:textColor="@color/text_muted"
             android:textSize="14sp"
             android:visibility="gone" />
 
-        <!-- SOUND + MUTE SECTION (Hello Kitty) -->
-        <FrameLayout
-            android:id="@+id/soundSection"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp">
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/bg_sound_card"
-                android:orientation="vertical"
-                android:padding="14dp">
+            <FrameLayout
+                android:id="@+id/tileWifi"
+                android:layout_width="0dp"
+                android:layout_height="64dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_vol_pink"
+                android:clickable="true"
+                android:focusable="true">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                <ImageView
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="@string/quick_wifi"
+                    android:src="@drawable/ic_tile_wifi_kitty" />
+            </FrameLayout>
 
-                    <ImageView
-                        android:layout_width="36dp"
-                        android:layout_height="36dp"
-                        android:contentDescription="@string/sound_title"
-                        android:src="@drawable/ic_sound_kitty" />
+            <FrameLayout
+                android:id="@+id/tileSilent"
+                android:layout_width="0dp"
+                android:layout_height="64dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_vol_pink"
+                android:clickable="true"
+                android:focusable="true">
 
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:layout_weight="1"
-                        android:text="@string/sound_title"
-                        android:textAppearance="@style/KittiyText.PanelTitle"
-                        android:textSize="16sp" />
+                <ImageView
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="@string/quick_silent"
+                    android:src="@drawable/ic_tile_mute_kitty" />
+            </FrameLayout>
 
-                    <ImageView
-                        android:id="@+id/btnMuteKitty"
-                        android:layout_width="44dp"
-                        android:layout_height="44dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:contentDescription="@string/quick_silent"
-                        android:padding="2dp"
-                        android:src="@drawable/ic_tile_mute_kitty" />
-                </LinearLayout>
+            <FrameLayout
+                android:id="@+id/tileLauncher"
+                android:layout_width="0dp"
+                android:layout_height="64dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_vol_pink"
+                android:clickable="true"
+                android:focusable="true">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:text="@string/volume_media"
-                    android:textColor="#F5FFFFFF"
-                    android:textSize="12sp" />
-
-                <SeekBar
-                    android:id="@+id/seekMedia"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:progressTint="@color/white"
-                    android:thumbTint="@color/white" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="@string/volume_ring"
-                    android:textColor="#F5FFFFFF"
-                    android:textSize="12sp" />
-
-                <SeekBar
-                    android:id="@+id/seekRing"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:progressTint="@color/white"
-                    android:thumbTint="@color/white" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="@string/volume_alarm"
-                    android:textColor="#F5FFFFFF"
-                    android:textSize="12sp" />
-
-                <SeekBar
-                    android:id="@+id/seekAlarm"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:progressTint="@color/white"
-                    android:thumbTint="@color/white" />
-            </LinearLayout>
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="18dp"
-                android:layout_gravity="top|end"
-                android:layout_marginEnd="8dp"
-                android:contentDescription="@null"
-                android:src="@drawable/ic_bow" />
-        </FrameLayout>
+                <ImageView
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="@string/set_default_launcher"
+                    android:src="@drawable/ic_tile_home_kitty" />
+            </FrameLayout>
+        </LinearLayout>
     </LinearLayout>
 </FrameLayout>
