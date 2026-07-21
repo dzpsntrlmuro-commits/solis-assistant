@@ -195,6 +195,7 @@ class HomeActivity : AppCompatActivity() {
             }
         }
         binding.tileSilent.setOnClickListener { toggleSilent() }
+        binding.btnMuteKitty.setOnClickListener { toggleSilent() }
         binding.tileLauncher.setOnClickListener { promptDefaultLauncher() }
     }
 
