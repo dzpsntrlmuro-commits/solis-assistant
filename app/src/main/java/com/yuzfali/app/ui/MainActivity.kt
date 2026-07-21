@@ -57,6 +57,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         setContentView(binding.root)
 
         textToSpeech = TextToSpeech(this, this)
+        clearLegacyFaceData()
         setupUi()
         checkPermissions()
     }
@@ -162,7 +163,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             return
         }
 
-        val report = FortuneEngine.generate(snapshot)
+        val report = FortuneEngine.generate(snapshot, System.nanoTime())
         currentReport = report
         binding.tvStatus.text = getString(R.string.status_done)
         showReport(report)
@@ -199,6 +200,12 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val params = panel.layoutParams
         params.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
         panel.layoutParams = params
+    }
+
+    private fun clearLegacyFaceData() {
+        listOf("yuzfali_face_profiles", "solis_prefs").forEach { name ->
+            getSharedPreferences(name, MODE_PRIVATE).edit().clear().apply()
+        }
     }
 
     private fun speakFuture() {
@@ -255,8 +262,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     companion object {
-        private const val SCAN_DURATION_MS = 5000L
-        private const val MIN_FACE_FRAMES = 3
+        private const val SCAN_DURATION_MS = 6000L
+        private const val MIN_FACE_FRAMES = 8
         private const val UTTERANCE_ID = "fortune_speech"
     }
 }
