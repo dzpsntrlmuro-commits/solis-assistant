@@ -1,15 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">İçki Say</string>
-    <string name="tagline">Kamerayı içkilere tut, yapay zeka saysın ve sesli söylesin</string>
-    <string name="btn_count">İçkileri Say</string>
-    <string name="btn_counting">Sayılıyor…</string>
-    <string name="btn_speak">Tekrar Söyle</string>
-    <string name="btn_stop_speak">Sustur</string>
-    <string name="status_ready">Arka kamerayı içkilere tutun ve butona basın</string>
-    <string name="status_counting">Yapay zeka içkileri sayıyor…</string>
-    <string name="status_permission">Kamera izni gerekli</string>
-    <string name="status_camera_error">Kamera başlatılamadı</string>
-    <string name="result_title">Sonuç</string>
-    <string name="detail_title">Detay</string>
+    <string name="app_name">Hello Kittiy</string>
+    <string name="home_greeting">Merhaba ♡</string>
+    <string name="home_subtitle">Hello Kittiy dünyası</string>
+    <string name="apps_title">Uygulamalar</string>
+    <string name="notifications_title">Bildirimler</string>
+    <string name="sound_title">Ses</string>
+    <string name="no_notifications">Henüz bildirim yok ♡</string>
+    <string name="set_default_launcher">Ana ekran olarak ayarla</string>
+    <string name="volume_media">Medya</string>
+    <string name="volume_ring">Zil</string>
+    <string name="volume_alarm">Alarm</string>
+    <string name="quick_wifi">Wi‑Fi</string>
+    <string name="quick_bt">Bluetooth</string>
+    <string name="quick_silent">Sessiz</string>
+    <string name="quick_bright">Parlaklık</string>
+    <string name="dock_phone">Telefon</string>
+    <string name="dock_messages">Mesaj</string>
+    <string name="dock_camera">Kamera</string>
+    <string name="dock_settings">Ayarlar</string>
+    <string name="search_hint">Uygulama ara…</string>
+    <string name="clear_all">Temizle</string>
+    <string name="panel_hint">Aşağı çek · bildirim &amp; ses</string>
+    <string name="launcher_hint">Kurulumdan sonra bu uygulamayı varsayılan ana ekran yap.</string>
 </resources>
