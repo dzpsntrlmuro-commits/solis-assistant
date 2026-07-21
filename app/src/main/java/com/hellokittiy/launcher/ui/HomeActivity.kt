@@ -50,12 +50,6 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
-    private val notifListener = object : KittyNotificationListener.Listener {
-        override fun onNotificationsChanged(items: List<NotifItem>) {
-            runOnUiThread { renderNotifications(items) }
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -71,13 +65,7 @@ class HomeActivity : AppCompatActivity() {
         setupVolume()
         setupSearch()
         setupGestures()
-
-        KittyNotificationListener.addListener(notifListener)
-        if (KittyNotificationListener.isEnabled(this)) {
-            renderNotifications(KittyNotificationListener.currentNotifications())
-        } else {
-            renderNotifications(sampleNotifications())
-        }
+        renderNotifications(sampleNotifications())
     }
 
     override fun onResume() {
@@ -92,17 +80,11 @@ class HomeActivity : AppCompatActivity() {
         clockHandler.removeCallbacks(clockTick)
     }
 
-    override fun onDestroy() {
-        KittyNotificationListener.removeListener(notifListener)
-        super.onDestroy()
-    }
-
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         if (panelOpen) {
             closePanel()
         }
-        // Launcher: ignore back
     }
 
     private fun setupInsets() {
@@ -202,9 +184,6 @@ class HomeActivity : AppCompatActivity() {
 
         binding.scrim.setOnClickListener { closePanel() }
         binding.btnClearNotifs.setOnClickListener {
-            if (KittyNotificationListener.isEnabled(this)) {
-                KittyNotificationListener.clearAll()
-            }
             renderNotifications(emptyList())
         }
 
@@ -307,9 +286,8 @@ class HomeActivity : AppCompatActivity() {
             .setInterpolator(DecelerateInterpolator())
             .start()
         syncVolumeSliders()
-        if (!KittyNotificationListener.isEnabled(this)) {
-            // Keep cute sample items until user grants listener access
-            if (notifAdapter.itemCount == 0) renderNotifications(sampleNotifications())
+        if (notifAdapter.itemCount == 0) {
+            renderNotifications(sampleNotifications())
         }
     }
 
