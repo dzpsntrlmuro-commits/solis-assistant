@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Ev Oyunu</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; user-select: none; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #1a1a1a; font-family: "Segoe UI", system-ui, sans-serif; }
+  #c { display: block; width: 100%; height: 100%; touch-action: none; }
+  #hud {
+    position: fixed; inset: 0; pointer-events: none; z-index: 10;
+    color: #f5f0e6;
+  }
+  #topbar {
+    position: absolute; top: 12px; left: 12px; right: 12px;
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+  }
+  .panel {
+    background: rgba(18, 22, 28, 0.72);
+    border: 1px solid rgba(245, 240, 230, 0.18);
+    backdrop-filter: blur(8px);
+    border-radius: 14px;
+    padding: 10px 14px;
+    max-width: 52vw;
+  }
+  .panel h1 { font-size: 15px; letter-spacing: 0.04em; font-weight: 700; color: #f0d9a8; }
+  .panel p { font-size: 12px; opacity: 0.9; margin-top: 4px; line-height: 1.35; }
+  #hint {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -120%);
+    font-size: 13px; padding: 8px 14px; border-radius: 999px;
+    background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.2);
+    opacity: 0; transition: opacity .2s;
+    white-space: nowrap;
+  }
+  #hint.show { opacity: 1; }
+  #crosshair {
+    position: absolute; top: 50%; left: 50%; width: 14px; height: 14px;
+    transform: translate(-50%, -50%);
+    border: 2px solid rgba(255,255,255,0.85);
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.35);
+  }
+  #crosshair.active { border-color: #f0d9a8; background: rgba(240,217,168,0.25); }
+  #actions {
+    position: absolute; right: 16px; bottom: 18px;
+    display: flex; flex-direction: column; gap: 10px; pointer-events: auto;
+  }
+  .btn {
+    min-width: 92px; height: 48px; border: none; border-radius: 14px;
+    background: rgba(240, 217, 168, 0.92); color: #1a1410;
+    font-weight: 700; font-size: 13px; pointer-events: auto;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn.secondary { background: rgba(255,255,255,0.16); color: #f5f0e6; border: 1px solid rgba(255,255,255,0.25); }
+  .btn:disabled { opacity: 0.35; }
+  #joyZone, #lookZone {
+    position: absolute; bottom: 0; top: 0; width: 48%; pointer-events: auto;
+  }
+  #joyZone { left: 0; }
+  #lookZone { right: 0; }
+  #stickBase {
+    position: absolute; left: 28px; bottom: 28px;
+    width: 118px; height: 118px; border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.18);
+    pointer-events: none;
+  }
+  #stickKnob {
+    position: absolute; left: 53px; bottom: 53px;
+    width: 68px; height: 68px; border-radius: 50%;
+    background: rgba(240, 217, 168, 0.55);
+    border: 2px solid rgba(245,240,230,0.55);
+    pointer-events: none;
+    transform: translate(0,0);
+  }
+  #inventory {
+    position: absolute; left: 16px; bottom: 160px;
+    display: flex; flex-direction: column; gap: 6px; pointer-events: auto;
+  }
+  .inv-item {
+    background: rgba(18,22,28,0.8); border: 1px solid rgba(240,217,168,0.35);
+    color: #f5f0e6; border-radius: 10px; padding: 8px 12px; font-size: 12px;
+  }
+  #start {
+    position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(180,120,60,0.35), transparent 50%),
+      radial-gradient(ellipse at 70% 80%, rgba(40,80,90,0.45), transparent 55%),
+      linear-gradient(160deg, #1c2428 0%, #2a2118 55%, #12161a 100%);
+    color: #f5f0e6; text-align: center; padding: 24px;
+  }
+  #start h1 {
+    font-size: clamp(28px, 6vw, 48px);
+    font-weight: 800; letter-spacing: 0.02em; color: #f0d9a8;
+    text-shadow: 0 4px 24px rgba(0,0,0,0.45);
+  }
+  #start p { margin: 12px auto 22px; max-width: 420px; opacity: 0.9; line-height: 1.5; font-size: 14px; }
+  #start button {
+    pointer-events: auto; border: none; border-radius: 16px; padding: 14px 28px;
+    background: #f0d9a8; color: #1a1410; font-weight: 800; font-size: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+  .fade-out { animation: fadeOut .45s ease forwards; }
+  @keyframes fadeOut { to { opacity: 0; visibility: hidden; } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud">
+  <div id="topbar">
+    <div class="panel">
+      <h1>EV OYUNU</h1>
+      <p id="status">Salon — serbest dolaş</p>
+    </div>
+    <div class="panel">
+      <p>Sol: yürü · Sağ: bak · Ortadaki hedefe bakıp etkileş</p>
+    </div>
+  </div>
+  <div id="hint"></div>
+  <div id="crosshair"></div>
+  <div id="inventory"></div>
+  <div id="joyZone"></div>
+  <div id="lookZone"></div>
+  <div id="stickBase"><div id="stickKnob" style="position:absolute;left:25px;top:25px;width:68px;height:68px;margin:0;bottom:auto;"></div></div>
+  <div id="actions">
+    <button class="btn" id="btnInteract" disabled>Etkileş</button>
+    <button class="btn secondary" id="btnDrop" disabled>Yere koy</button>
+    <button class="btn secondary" id="btnRemove" disabled>Kaldır</button>
+  </div>
+</div>
+<div id="start">
+  <div>
+    <h1>EV OYUNU</h1>
+    <p>Evin içinde GTA tarzı dolaş. Kapıyı aç, TV’yi kapatıp aç, koltuk ve masaları kaldırıp istediğin yere koy.</p>
+    <button id="btnStart">Eve Gir</button>
+  </div>
+</div>
+<script src="three.min.js"></script>
+<script>
+(function () {
+  const canvas = document.getElementById('c');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.shadowMap.enabled = true;
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x8aa0a8);
+  scene.fog = new THREE.Fog(0x8aa0a8, 12, 28);
+
+  const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.08, 60);
+  camera.position.set(0, 1.6, 4.5);
+
+  // Lights
+  scene.add(new THREE.AmbientLight(0xfff2e0, 0.55));
+  const sun = new THREE.DirectionalLight(0xffe2c0, 0.85);
+  sun.position.set(4, 8, 2);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(1024, 1024);
+  scene.add(sun);
+  const lamp = new THREE.PointLight(0xffd8a8, 0.55, 12);
+  lamp.position.set(-2.2, 2.3, -1.5);
+  scene.add(lamp);
+
+  // Materials
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0xe8dfd0, roughness: 0.4 });
+  const wallAccent = new THREE.MeshStandardMaterial({ color: 0xd9c7b0, roughness: 0.35 });
+  const floorMat = new THREE.MeshStandardMaterial({ color: 0xb08968, roughness: 0.25, metalness: 0.05 });
+  const ceilMat = new THREE.MeshStandardMaterial({ color: 0xf4f1ea, roughness: 1 });
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x6b4423, roughness: 0.55 });
+  const darkWood = new THREE.MeshStandardMaterial({ color: 0x3d2a1a, roughness: 0.6 });
+  const fabric = new THREE.MeshStandardMaterial({ color: 0x4a5d4e, roughness: 0.85 });
+  const fabric2 = new THREE.MeshStandardMaterial({ color: 0x6e4c3a, roughness: 0.85 });
+  const metal = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.6, roughness: 0.35 });
+  const whiteApp = new THREE.MeshStandardMaterial({ color: 0xececec, roughness: 0.35 });
+  const glassMat = new THREE.MeshStandardMaterial({ color: 0x88aacc, transparent: true, opacity: 0.35, metalness: 0.2, roughness: 0.1 });
+
+  const interactables = [];
+  const colliders = []; // {minx,maxx,minz,maxz}
+  let held = null;
+  let tvOn = false;
+  let doorOpen = false;
+  let focused = null;
+
+  function addBox(w, h, d, mat, x, y, z, opts) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    if (opts && opts.rotY) mesh.rotation.y = opts.rotY;
+    scene.add(mesh);
+    return mesh;
+  }
+
+  function addCollider(x, z, w, d, pad) {
+    pad = pad || 0.15;
+    colliders.push({
+      minx: x - w / 2 - pad, maxx: x + w / 2 + pad,
+      minz: z - d / 2 - pad, maxz: z + d / 2 + pad
+    });
+  }
+
+  function makeInteractable(mesh, info) {
+    mesh.userData = Object.assign({ type: 'object', movable: true, removable: true, label: 'Eşya' }, info || {});
+    interactables.push(mesh);
+    return mesh;
+  }
+
+  // ===== APARTMENT LAYOUT =====
+  // Living room ~ 7x6, kitchen attached at -x, hallway/bedroom at +z behind door
+  function buildApartment() {
+    // Floors
+    const livingFloor = addBox(8.2, 0.08, 7.2, floorMat, 0, 0, 0);
+    livingFloor.receiveShadow = true;
+    addBox(4.2, 0.08, 4.2, new THREE.MeshStandardMaterial({ color: 0xc4b8a5, roughness: 0.7 }), -6.2, 0, -0.5); // kitchen
+    addBox(3.6, 0.08, 5.2, new THREE.MeshStandardMaterial({ color: 0xa67c52, roughness: 0.5 }), 0.5, 0, -6.5); // bedroom/hall
+
+    // Ceiling
+    addBox(8.2, 0.08, 7.2, ceilMat, 0, 2.75, 0);
+    addBox(4.2, 0.08, 4.2, ceilMat, -6.2, 2.75, -0.5);
+    addBox(3.6, 0.08, 5.2, ceilMat, 0.5, 2.75, -6.5);
+
+    // Outer walls living
+    addBox(8.2, 2.75, 0.18, wallMat, 0, 1.375, 3.6); // south (window wall front-ish)
+    addBox(0.18, 2.75, 7.2, wallMat, 4.1, 1.375, 0); // east
+    // north wall with door opening
+    addBox(2.6, 2.75, 0.18, wallMat, -2.7, 1.375, -3.6);
+    addBox(2.6, 2.75, 0.18, wallMat, 2.7, 1.375, -3.6);
+    addBox(2.0, 0.7, 0.18, wallMat, 0, 2.4, -3.6); // lintel over door
+    // west wall with kitchen opening
+    addBox(0.18, 2.75, 2.0, wallMat, -4.1, 1.375, 2.4);
+    addBox(0.18, 2.75, 2.0, wallMat, -4.1, 1.375, -2.4);
+    addBox(0.18, 0.7, 2.4, wallMat, -4.1, 2.4, 0);
+
+    // Kitchen walls
+    addBox(0.18, 2.75, 4.2, wallMat, -8.3, 1.375, -0.5);
+    addBox(4.2, 2.75, 0.18, wallMat, -6.2, 1.375, 1.6);
+    addBox(4.2, 2.75, 0.18, wallMat, -6.2, 1.375, -2.6);
+
+    // Bedroom walls
+    addBox(3.6, 2.75, 0.18, wallMat, 0.5, 1.375, -9.1);
+    addBox(0.18, 2.75, 5.2, wallMat, -1.3, 1.375, -6.5);
+    addBox(0.18, 2.75, 5.2, wallMat, 2.3, 1.375, -6.5);
+
+    // Static wall colliders (simplified)
+    [
+      [0, 3.6, 8.2, 0.18], [4.1, 0, 0.18, 7.2],
+      [-2.7, -3.6, 2.6, 0.18], [2.7, -3.6, 2.6, 0.18],
+      [-4.1, 2.4, 0.18, 2.0], [-4.1, -2.4, 0.18, 2.0],
+      [-8.3, -0.5, 0.18, 4.2], [-6.2, 1.6, 4.2, 0.18], [-6.2, -2.6, 4.2, 0.18],
+      [0.5, -9.1, 3.6, 0.18], [-1.3, -6.5, 0.18, 5.2], [2.3, -6.5, 0.18, 5.2]
+    ].forEach(function (c) { addCollider(c[0], c[1], c[2], c[3], 0.2); });
+
+    // Window on south wall
+    const win = addBox(2.4, 1.4, 0.08, glassMat, 0, 1.55, 3.5);
+    win.castShadow = false;
+
+    // Baseboards
+    addBox(8.0, 0.12, 0.06, darkWood, 0, 0.08, 3.5);
+  }
+
+  // Door (entrance between living and bedroom/hall)
+  const doorPivot = new THREE.Group();
+  doorPivot.position.set(-0.85, 0, -3.6);
+  scene.add(doorPivot);
+  const door = addBox(1.7, 2.15, 0.08, woodMat, 0.85, 1.075, 0);
+  doorPivot.add(door);
+  const doorKnob = addBox(0.05, 0.05, 0.08, metal, 1.5, 1.0, 0.06);
+  doorPivot.add(doorKnob);
+  makeInteractable(door, { type: 'door', movable: false, removable: false, label: 'Kapı', pivot: doorPivot });
+
+  // TV unit + TV on east wall, facing into living room
+  const tvStand = addBox(1.8, 0.45, 0.45, darkWood, 3.3, 0.25, -0.2);
+  makeInteractable(tvStand, { label: 'TV Sehpası', w: 1.8, d: 0.45 });
+  addCollider(3.3, -0.2, 1.8, 0.45);
+
+  const tvScreenMat = new THREE.MeshStandardMaterial({ color: 0x111111, emissive: 0x000000, roughness: 0.4 });
+  const tvBody = addBox(1.5, 0.9, 0.08, metal, 3.55, 1.05, -0.2);
+  tvBody.rotation.y = -Math.PI / 2;
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(1.35, 0.75), tvScreenMat);
+  screen.position.set(0, 0, 0.05);
+  tvBody.add(screen);
+  makeInteractable(tvBody, { type: 'tv', movable: true, removable: true, label: 'Televizyon', screen: tvScreenMat, w: 0.08, d: 1.5 });
+
+  // Sofa
+  const sofa = new THREE.Group();
+  sofa.position.set(-1.2, 0, 1.8);
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.45, 0.95), fabric);
+  seat.position.y = 0.35; seat.castShadow = true;
+  sofa.add(seat);
+  const back = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.7, 0.22), fabric);
+  back.position.set(0, 0.7, 0.4); back.castShadow = true;
+  sofa.add(back);
+  const armL = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.5, 0.95), fabric2);
+  armL.position.set(-1.1, 0.45, 0); sofa.add(armL);
+  const armR = armL.clone(); armR.position.x = 1.1; sofa.add(armR);
+  scene.add(sofa);
+  makeInteractable(sofa, { label: 'Koltuk', w: 2.4, d: 0.95, isGroup: true });
+  addCollider(-1.2, 1.8, 2.4, 0.95);
+
+  // Coffee table
+  const table = addBox(1.1, 0.4, 0.6, woodMat, -1.0, 0.22, 0.4);
+  makeInteractable(table, { label: 'Sehpa', w: 1.1, d: 0.6 });
+  addCollider(-1.0, 0.4, 1.1, 0.6);
+
+  // Armchair
+  const chair = new THREE.Group();
+  chair.position.set(1.5, 0, 1.5);
+  chair.rotation.y = -0.6;
+  const cSeat = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.4, 0.8), fabric2);
+  cSeat.position.y = 0.35; chair.add(cSeat);
+  const cBack = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.7, 0.18), fabric2);
+  cBack.position.set(0, 0.7, 0.32); chair.add(cBack);
+  scene.add(chair);
+  makeInteractable(chair, { label: 'Berjer', w: 0.8, d: 0.8, isGroup: true });
+  addCollider(1.5, 1.5, 0.8, 0.8);
+
+  // Floor lamp
+  const lampStand = addBox(0.08, 1.4, 0.08, metal, -3.4, 0.7, 2.6);
+  const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.35, 0.35, 16), new THREE.MeshStandardMaterial({ color: 0xf2e6c9, emissive: 0x443311, emissiveIntensity: 0.2 }));
+  shade.position.set(-3.4, 1.55, 2.6);
+  scene.add(shade);
+  makeInteractable(lampStand, { label: 'Lambader', w: 0.35, d: 0.35, linked: shade });
+  addCollider(-3.4, 2.6, 0.35, 0.35);
+
+  // Rug
+  const rug = addBox(2.8, 0.03, 2.0, new THREE.MeshStandardMaterial({ color: 0x8b3a3a, roughness: 1 }), -1.0, 0.05, 0.9);
+  makeInteractable(rug, { label: 'Halı', w: 2.8, d: 2.0, removable: true });
+
+  // Kitchen cabinets + fridge
+  const fridge = addBox(0.75, 1.9, 0.7, whiteApp, -7.7, 0.95, 0.7);
+  makeInteractable(fridge, { label: 'Buzdolabı', w: 0.75, d: 0.7 });
+  addCollider(-7.7, 0.7, 0.75, 0.7);
+  const counter = addBox(2.4, 0.9, 0.6, woodMat, -6.0, 0.45, -2.1);
+  makeInteractable(counter, { label: 'Mutfak Tezgahı', w: 2.4, d: 0.6 });
+  addCollider(-6.0, -2.1, 2.4, 0.6);
+
+  // Bed in bedroom
+  const bed = new THREE.Group();
+  bed.position.set(0.5, 0, -7.4);
+  const mattress = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.4, 2.1), new THREE.MeshStandardMaterial({ color: 0xd8cfc0 }));
+  mattress.position.y = 0.35; bed.add(mattress);
+  const headboard = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.9, 0.12), darkWood);
+  headboard.position.set(0, 0.7, -1.0); bed.add(headboard);
+  const pillow = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.15, 0.35), new THREE.MeshStandardMaterial({ color: 0xf5f5f5 }));
+  pillow.position.set(-0.35, 0.6, -0.7); bed.add(pillow);
+  const pillow2 = pillow.clone(); pillow2.position.x = 0.35; bed.add(pillow2);
+  scene.add(bed);
+  makeInteractable(bed, { label: 'Yatak', w: 1.6, d: 2.1, isGroup: true });
+  addCollider(0.5, -7.4, 1.6, 2.1);
+
+  // Nightstand
+  const night = addBox(0.45, 0.5, 0.4, woodMat, 1.6, 0.25, -7.8);
+  makeInteractable(night, { label: 'Komodin', w: 0.45, d: 0.4 });
+  addCollider(1.6, -7.8, 0.45, 0.4);
+
+  // Picture frame on wall
+  const frame = addBox(0.9, 0.65, 0.04, darkWood, -2.0, 1.7, -3.5);
+  const pic = addBox(0.75, 0.5, 0.02, new THREE.MeshStandardMaterial({ color: 0x6a8f9a }), -2.0, 1.7, -3.47);
+  makeInteractable(frame, { label: 'Tablo', w: 0.9, d: 0.1, linked: pic });
+
+  buildApartment();
+
+  // ===== CONTROLS =====
+  const keys = { f: 0, b: 0, l: 0, r: 0 };
+  let yaw = Math.PI; // looking toward -z initially? start looking into room toward TV (east-ish)
+  yaw = -0.2;
+  let pitch = 0;
+  const eye = 1.55;
+  const player = { x: 0, z: 2.8, speed: 3.2 };
+  camera.position.set(player.x, eye, player.z);
+
+  // Joystick
+  const joyZone = document.getElementById('joyZone');
+  const lookZone = document.getElementById('lookZone');
+  const knob = document.getElementById('stickKnob');
+  const stickBase = document.getElementById('stickBase');
+  let joyId = null, joyDX = 0, joyDY = 0;
+  let lookId = null, lastLookX = 0, lastLookY = 0;
+
+  function setKnob(dx, dy) {
+    const max = 34;
+    const len = Math.hypot(dx, dy) || 1;
+    const c = Math.min(1, max / len);
+    knob.style.transform = 'translate(' + (dx * c) + 'px,' + (dy * c) + 'px)';
+  }
+
+  joyZone.addEventListener('touchstart', function (e) {
+    const t = e.changedTouches[0];
+    joyId = t.identifier;
+    const rect = stickBase.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    joyDX = t.clientX - cx; joyDY = t.clientY - cy;
+    const max = 50;
+    const m = Math.hypot(joyDX, joyDY);
+    if (m > max) { joyDX *= max / m; joyDY *= max / m; }
+    setKnob(joyDX, joyDY);
+    e.preventDefault();
+  }, { passive: false });
+  joyZone.addEventListener('touchmove', function (e) {
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const t = e.changedTouches[i];
+      if (t.identifier !== joyId) continue;
+      const rect = stickBase.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      joyDX = t.clientX - cx; joyDY = t.clientY - cy;
+      const max = 50;
+      const m = Math.hypot(joyDX, joyDY);
+      if (m > max) { joyDX *= max / m; joyDY *= max / m; }
+      setKnob(joyDX, joyDY);
+    }
+    e.preventDefault();
+  }, { passive: false });
+  function endJoy(e) {
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === joyId) {
+        joyId = null; joyDX = 0; joyDY = 0; setKnob(0, 0);
+      }
+    }
+  }
+  joyZone.addEventListener('touchend', endJoy);
+  joyZone.addEventListener('touchcancel', endJoy);
+
+  lookZone.addEventListener('touchstart', function (e) {
+    const t = e.changedTouches[0];
+    lookId = t.identifier;
+    lastLookX = t.clientX; lastLookY = t.clientY;
+    e.preventDefault();
+  }, { passive: false });
+  lookZone.addEventListener('touchmove', function (e) {
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const t = e.changedTouches[i];
+      if (t.identifier !== lookId) continue;
+      const dx = t.clientX - lastLookX;
+      const dy = t.clientY - lastLookY;
+      lastLookX = t.clientX; lastLookY = t.clientY;
+      yaw -= dx * 0.0055;
+      pitch -= dy * 0.0045;
+      pitch = Math.max(-1.2, Math.min(1.2, pitch));
+    }
+    e.preventDefault();
+  }, { passive: false });
+  function endLook(e) {
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === lookId) lookId = null;
+    }
+  }
+  lookZone.addEventListener('touchend', endLook);
+  lookZone.addEventListener('touchcancel', endLook);
+
+  // Mouse desktop support
+  let pointerLocked = false;
+  window.addEventListener('keydown', function (e) {
+    if (e.code === 'KeyW') keys.f = 1;
+    if (e.code === 'KeyS') keys.b = 1;
+    if (e.code === 'KeyA') keys.l = 1;
+    if (e.code === 'KeyD') keys.r = 1;
+    if (e.code === 'KeyE') doInteract();
+    if (e.code === 'KeyQ') dropHeld();
+    if (e.code === 'KeyR') removeFocused();
+  });
+  window.addEventListener('keyup', function (e) {
+    if (e.code === 'KeyW') keys.f = 0;
+    if (e.code === 'KeyS') keys.b = 0;
+    if (e.code === 'KeyA') keys.l = 0;
+    if (e.code === 'KeyD') keys.r = 0;
+  });
+  canvas.addEventListener('click', function () {
+    if (!started) return;
+    canvas.requestPointerLock && canvas.requestPointerLock();
+  });
+  document.addEventListener('pointerlockchange', function () {
+    pointerLocked = document.pointerLockElement === canvas;
+  });
+  document.addEventListener('mousemove', function (e) {
+    if (!pointerLocked) return;
+    yaw -= e.movementX * 0.0025;
+    pitch -= e.movementY * 0.0022;
+    pitch = Math.max(-1.2, Math.min(1.2, pitch));
+  });
+
+  // Collision
+  function blocked(nx, nz) {
+    const r = 0.28;
+    for (let i = 0; i < colliders.length; i++) {
+      const c = colliders[i];
+      if (nx + r > c.minx && nx - r < c.maxx && nz + r > c.minz && nz - r < c.maxz) return true;
+    }
+    // Door closed blocks doorway
+    if (!doorOpen) {
+      if (nx > -1.0 && nx < 1.0 && nz > -3.85 && nz < -3.35) return true;
+    }
+    return false;
+  }
+
+  // Raycast focus
+  const raycaster = new THREE.Raycaster();
+  const hintEl = document.getElementById('hint');
+  const cross = document.getElementById('crosshair');
+  const statusEl = document.getElementById('status');
+  const btnInteract = document.getElementById('btnInteract');
+  const btnDrop = document.getElementById('btnDrop');
+  const btnRemove = document.getElementById('btnRemove');
+  const invEl = document.getElementById('inventory');
+
+  function updateFocus() {
+    raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+    const hits = raycaster.intersectObjects(interactables, true);
+    focused = null;
+    for (let i = 0; i < hits.length; i++) {
+      let o = hits[i].object;
+      while (o && interactables.indexOf(o) < 0) o = o.parent;
+      if (o && hits[i].distance < 3.2) { focused = o; break; }
+    }
+    if (focused) {
+      cross.classList.add('active');
+      hintEl.textContent = focused.userData.label + (focused.userData.type === 'tv' ? (tvOn ? ' (Açık)' : ' (Kapalı)') : focused.userData.type === 'door' ? (doorOpen ? ' (Açık)' : ' (Kapalı)') : '');
+      hintEl.classList.add('show');
+      btnInteract.disabled = false;
+      btnInteract.textContent = focused.userData.type === 'tv' ? (tvOn ? 'TV Kapat' : 'TV Aç')
+        : focused.userData.type === 'door' ? (doorOpen ? 'Kapıyı Kapat' : 'Kapıyı Aç')
+        : (held ? 'Değiştir' : 'Al / Taşı');
+      btnRemove.disabled = !focused.userData.removable || focused.userData.type === 'door' || focused.userData.type === 'tv' && false;
+      if (!focused.userData.removable) btnRemove.disabled = true;
+    } else {
+      cross.classList.remove('active');
+      hintEl.classList.remove('show');
+      btnInteract.disabled = true;
+      btnRemove.disabled = true;
+      btnInteract.textContent = 'Etkileş';
+    }
+    btnDrop.disabled = !held;
+    updateRoomLabel();
+  }
+
+  function updateRoomLabel() {
+    let room = 'Salon';
+    if (player.x < -4.2) room = 'Mutfak';
+    else if (player.z < -3.7) room = 'Koridor / Yatak Odası';
+    statusEl.textContent = room + (held ? ' · Elinde: ' + held.userData.label : ' — serbest dolaş');
+  }
+
+  function refreshInventory() {
+    invEl.innerHTML = '';
+    if (held) {
+      const d = document.createElement('div');
+      d.className = 'inv-item';
+      d.textContent = 'Elinde: ' + held.userData.label;
+      invEl.appendChild(d);
+    }
+  }
+
+  function doInteract() {
+    if (!focused) return;
+    const ud = focused.userData;
+    if (ud.type === 'tv') {
+      tvOn = !tvOn;
+      ud.screen.emissive.setHex(tvOn ? 0x2266aa : 0x000000);
+      ud.screen.emissiveIntensity = tvOn ? 0.85 : 0;
+      ud.screen.color.setHex(tvOn ? 0x3399dd : 0x111111);
+      return;
+    }
+    if (ud.type === 'door') {
+      doorOpen = !doorOpen;
+      // animate via target
+      return;
+    }
+    if (ud.movable) {
+      if (held && held !== focused) {
+        // swap: drop current first where looking
+        dropHeld();
+      }
+      // pick up
+      held = focused;
+      held.visible = false;
+      if (held.userData.linked) held.userData.linked.visible = false;
+      // remove collider near old position
+      rebuildColliders();
+      refreshInventory();
+    }
+  }
+
+  function dropHeld() {
+    if (!held) return;
+    const dist = 1.6;
+    const nx = player.x - Math.sin(yaw) * dist;
+    const nz = player.z - Math.cos(yaw) * dist;
+    held.position.x = nx;
+    held.position.z = nz;
+    if (held.userData.isGroup) {
+      // groups use own position
+    } else {
+      // keep y
+    }
+    if (held.userData.linked) {
+      const link = held.userData.linked;
+      link.visible = true;
+      // rough follow for lamp shade etc
+      if (held.userData.label === 'Lambader') {
+        link.position.set(nx, 1.55, nz);
+      } else if (held.userData.label === 'Tablo') {
+        link.position.set(nx, held.position.y, nz + 0.03);
+      }
+    }
+    held.visible = true;
+    held = null;
+    rebuildColliders();
+    refreshInventory();
+  }
+
+  function removeFocused() {
+    const target = held || focused;
+    if (!target || !target.userData.removable) return;
+    if (target.userData.type === 'door') return;
+    scene.remove(target);
+    if (target.userData.linked) scene.remove(target.userData.linked);
+    const idx = interactables.indexOf(target);
+    if (idx >= 0) interactables.splice(idx, 1);
+    if (held === target) held = null;
+    focused = null;
+    rebuildColliders();
+    refreshInventory();
+  }
+
+  function rebuildColliders() {
+    // Keep wall colliders (first N), rebuild furniture ones simply from visible interactables
+    // Walls were added first — count them
+    // Simpler: clear all and re-add walls + furniture
+    colliders.length = 0;
+    [
+      [0, 3.6, 8.2, 0.18], [4.1, 0, 0.18, 7.2],
+      [-2.7, -3.6, 2.6, 0.18], [2.7, -3.6, 2.6, 0.18],
+      [-4.1, 2.4, 0.18, 2.0], [-4.1, -2.4, 0.18, 2.0],
+      [-8.3, -0.5, 0.18, 4.2], [-6.2, 1.6, 4.2, 0.18], [-6.2, -2.6, 4.2, 0.18],
+      [0.5, -9.1, 3.6, 0.18], [-1.3, -6.5, 0.18, 5.2], [2.3, -6.5, 0.18, 5.2]
+    ].forEach(function (c) { addCollider(c[0], c[1], c[2], c[3], 0.2); });
+    interactables.forEach(function (m) {
+      if (!m.visible || m.userData.type === 'door') return;
+      const w = m.userData.w || 0.6;
+      const d = m.userData.d || 0.6;
+      // world position
+      const p = new THREE.Vector3();
+      m.getWorldPosition(p);
+      if (m.userData.label === 'Halı' || m.userData.label === 'Tablo') return;
+      addCollider(p.x, p.z, w, d);
+    });
+  }
+
+  btnInteract.addEventListener('click', function (e) { e.stopPropagation(); doInteract(); });
+  btnDrop.addEventListener('click', function (e) { e.stopPropagation(); dropHeld(); });
+  btnRemove.addEventListener('click', function (e) { e.stopPropagation(); removeFocused(); });
+
+  // TV noise animation
+  let tvTime = 0;
+
+  let started = false;
+  document.getElementById('btnStart').addEventListener('click', function () {
+    started = true;
+    document.getElementById('start').classList.add('fade-out');
+    setTimeout(function () { document.getElementById('start').style.display = 'none'; }, 450);
+  });
+
+  window.addEventListener('resize', function () {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  let last = performance.now();
+  function tick(now) {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+
+    // Door animation
+    const doorTarget = doorOpen ? -1.9 : 0;
+    doorPivot.rotation.y += (doorTarget - doorPivot.rotation.y) * Math.min(1, dt * 4);
+
+    if (started) {
+      // Movement from joystick + keys
+      let mx = joyDX / 50;
+      let mz = joyDY / 50;
+      mx += keys.r - keys.l;
+      mz += keys.b - keys.f;
+      const mag = Math.hypot(mx, mz);
+      if (mag > 1) { mx /= mag; mz /= mag; }
+      if (mag > 0.05) {
+        const forwardX = -Math.sin(yaw);
+        const forwardZ = -Math.cos(yaw);
+        const rightX = Math.cos(yaw);
+        const rightZ = -Math.sin(yaw);
+        // joystick: up = forward (negative joyDY)
+        const wishX = forwardX * (-mz) + rightX * mx;
+        const wishZ = forwardZ * (-mz) + rightZ * mx;
+        const nx = player.x + wishX * player.speed * dt;
+        const nz = player.z + wishZ * player.speed * dt;
+        if (!blocked(nx, player.z)) player.x = nx;
+        if (!blocked(player.x, nz)) player.z = nz;
+        // soft bounds
+        player.x = Math.max(-8.0, Math.min(3.8, player.x));
+        player.z = Math.max(-8.8, Math.min(3.3, player.z));
+      }
+
+      camera.position.set(player.x, eye, player.z);
+      camera.rotation.order = 'YXZ';
+      camera.rotation.y = yaw;
+      camera.rotation.x = pitch;
+
+      if (tvOn) {
+        tvTime += dt;
+        const flicker = 0.7 + Math.sin(tvTime * 9) * 0.15 + Math.sin(tvTime * 23) * 0.08;
+        tvScreenMat.emissiveIntensity = flicker;
+        tvScreenMat.emissive.setHSL((tvTime * 0.08) % 1, 0.55, 0.35);
+      }
+
+      updateFocus();
+    }
+
+    renderer.render(scene, camera);
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

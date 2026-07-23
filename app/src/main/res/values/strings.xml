@@ -1,15 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">İçki Say</string>
-    <string name="tagline">Kamerayı içkilere tut, yapay zeka saysın ve sesli söylesin</string>
-    <string name="btn_count">İçkileri Say</string>
-    <string name="btn_counting">Sayılıyor…</string>
-    <string name="btn_speak">Tekrar Söyle</string>
-    <string name="btn_stop_speak">Sustur</string>
-    <string name="status_ready">Arka kamerayı içkilere tutun ve butona basın</string>
-    <string name="status_counting">Yapay zeka içkileri sayıyor…</string>
-    <string name="status_permission">Kamera izni gerekli</string>
-    <string name="status_camera_error">Kamera başlatılamadı</string>
-    <string name="result_title">Sonuç</string>
-    <string name="detail_title">Detay</string>
+    <string name="app_name">Ev Oyunu</string>
 </resources>

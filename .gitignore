@@ -10,5 +10,6 @@
 .externalNativeBuild
 .cxx
 *.apk
+!EvOyunu.apk
 !docs/**
 build-output.txt
