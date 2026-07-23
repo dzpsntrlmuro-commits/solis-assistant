@@ -60,6 +60,16 @@
                     android:textColor="@color/teal_mid"
                     android:textSize="11sp" />
             </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/downloadsButton"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/downloads_title"
+                android:padding="9dp"
+                android:src="@drawable/ic_download"
+                app:tint="@color/ink" />
         </LinearLayout>
 
         <LinearLayout
@@ -351,6 +361,24 @@
                 android:textAllCaps="false"
                 android:textColor="@color/surface"
                 app:cornerRadius="16dp"
+                app:strokeColor="#66FFFFFF"
+                app:strokeWidth="1dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/landingDownloadsButton"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:fontFamily="@font/outfit_medium"
+                android:text="@string/downloads_title"
+                android:textAllCaps="false"
+                android:textColor="@color/surface"
+                app:cornerRadius="16dp"
+                app:icon="@drawable/ic_download"
+                app:iconGravity="textStart"
+                app:iconPadding="8dp"
+                app:iconTint="@color/surface"
                 app:strokeColor="#66FFFFFF"
                 app:strokeWidth="1dp" />
         </LinearLayout>

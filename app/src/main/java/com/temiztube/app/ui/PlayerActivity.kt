@@ -1,6 +1,7 @@
 package com.temiztube.app.ui
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -37,7 +38,7 @@ import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.ui.PlayerView
 import com.temiztube.app.R
 import com.temiztube.app.data.AdBlockFilter
-import com.temiztube.app.data.MediaDownloader
+import com.temiztube.app.data.DownloadRepository
 import com.temiztube.app.data.YoutubeRepository
 import com.temiztube.app.databinding.ActivityPlayerBinding
 import com.temiztube.app.model.DownloadAssets
@@ -46,6 +47,7 @@ import com.temiztube.app.model.StreamKind
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.io.ByteArrayInputStream
+import java.util.concurrent.atomic.AtomicReference
 
 @SuppressLint("SetJavaScriptEnabled", "UnsafeOptInUsageError")
 class PlayerActivity : AppCompatActivity() {
@@ -64,6 +66,9 @@ class PlayerActivity : AppCompatActivity() {
     private var downloadAssets: DownloadAssets? = null
     private var downloadJob: Job? = null
     private var currentPlayable: PlayableStream? = null
+    private val capturedVideoUrl = AtomicReference<String?>(null)
+    private val capturedAudioUrl = AtomicReference<String?>(null)
+    private val downloadRepository by lazy { DownloadRepository.get(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -86,6 +91,9 @@ class PlayerActivity : AppCompatActivity() {
         binding.webFallbackButton.isVisible = false
         binding.downloadVideoButton.setOnClickListener { startDownload(video = true) }
         binding.downloadMp3Button.setOnClickListener { startDownload(video = false) }
+        binding.downloadsTabButton.setOnClickListener {
+            startActivity(Intent(this, DownloadsActivity::class.java))
+        }
 
         binding.playerView.setFullscreenButtonClickListener { enter ->
             if (enter) enterFullscreen() else exitFullscreen()
@@ -317,6 +325,7 @@ class PlayerActivity : AppCompatActivity() {
                 if (url.isNotBlank() && AdBlockFilter.shouldBlock(url)) {
                     return EMPTY_RESPONSE
                 }
+                rememberMediaUrl(url)
                 return super.shouldInterceptRequest(view, request)
             }
 
@@ -339,6 +348,10 @@ class PlayerActivity : AppCompatActivity() {
     private fun startExoPlayer(stream: PlayableStream) {
         usingExo = true
         currentPlayable = stream
+        if (stream.kind == StreamKind.PROGRESSIVE || stream.kind == StreamKind.MERGED) {
+            rememberMediaUrl(stream.videoUrl)
+            stream.audioUrl?.let { rememberMediaUrl(it) }
+        }
         removeWebView()
         binding.playerView.isVisible = true
         binding.streamLoading.isVisible = true
@@ -437,74 +450,23 @@ class PlayerActivity : AppCompatActivity() {
             return
         }
         downloadJob?.cancel()
-        Toast.makeText(this, R.string.download_preparing, Toast.LENGTH_SHORT).show()
         binding.downloadVideoButton.isEnabled = false
         binding.downloadMp3Button.isEnabled = false
 
         downloadJob = lifecycleScope.launch {
-            var assets = downloadAssets
-                ?: runCatching { repository.resolveDownloadAssets(videoUrl) }.getOrNull()
-                ?: currentPlayable?.let { repository.downloadAssetsFromPlayable(it) }
-
-            if (assets != null) {
-                downloadAssets = assets
-            }
-
-            if (assets == null) {
-                binding.downloadVideoButton.isEnabled = true
-                binding.downloadMp3Button.isEnabled = true
-                Toast.makeText(this@PlayerActivity, R.string.download_failed, Toast.LENGTH_LONG).show()
-                return@launch
-            }
-
             try {
-                val url: String?
-                val fileName: String
-                val mime: String
-                if (video) {
-                    url = assets.videoUrl
-                    fileName = assets.videoFileName
-                    mime = assets.videoMime
-                    if (url.isNullOrBlank()) {
-                        Toast.makeText(this@PlayerActivity, R.string.download_no_video, Toast.LENGTH_SHORT).show()
-                        return@launch
-                    }
-                } else {
-                    url = assets.audioUrl
-                    fileName = assets.audioFileName
-                    mime = assets.audioMime
-                    if (url.isNullOrBlank()) {
-                        Toast.makeText(this@PlayerActivity, R.string.download_no_audio, Toast.LENGTH_SHORT).show()
-                        return@launch
-                    }
-                }
-
-                Toast.makeText(this@PlayerActivity, R.string.download_started, Toast.LENGTH_SHORT).show()
-                try {
-                    MediaDownloader.download(
-                        context = this@PlayerActivity,
-                        url = url,
-                        fileName = fileName,
-                        mimeType = mime
-                    )
-                } catch (first: Exception) {
-                    // Stale/proxy URL — force a fresh resolve and retry once
-                    downloadAssets = null
-                    assets = runCatching { repository.resolveDownloadAssets(videoUrl) }.getOrNull()
-                        ?: throw first
-                    downloadAssets = assets
-                    val retryUrl = if (video) assets.videoUrl else assets.audioUrl
-                    val retryName = if (video) assets.videoFileName else assets.audioFileName
-                    val retryMime = if (video) assets.videoMime else assets.audioMime
-                    if (retryUrl.isNullOrBlank() || retryUrl == url) throw first
-                    MediaDownloader.download(
-                        context = this@PlayerActivity,
-                        url = retryUrl,
-                        fileName = retryName,
-                        mimeType = retryMime
-                    )
-                }
-                Toast.makeText(this@PlayerActivity, R.string.download_complete, Toast.LENGTH_LONG).show()
+                downloadRepository.enqueue(
+                    videoUrl = videoUrl,
+                    videoId = videoId,
+                    title = binding.playerTitle.text?.toString().orEmpty(),
+                    wantVideo = video,
+                    cachedAssets = downloadAssets,
+                    cachedPlayable = currentPlayable,
+                    capturedVideoUrl = capturedVideoUrl.get(),
+                    capturedAudioUrl = capturedAudioUrl.get()
+                )
+                Toast.makeText(this@PlayerActivity, R.string.download_queued, Toast.LENGTH_SHORT).show()
+                startActivity(Intent(this@PlayerActivity, DownloadsActivity::class.java))
             } catch (e: Exception) {
                 Toast.makeText(
                     this@PlayerActivity,
@@ -514,6 +476,29 @@ class PlayerActivity : AppCompatActivity() {
             } finally {
                 binding.downloadVideoButton.isEnabled = true
                 binding.downloadMp3Button.isEnabled = true
+            }
+        }
+    }
+
+    private fun rememberMediaUrl(url: String) {
+        if (url.isBlank()) return
+        val lower = url.lowercase()
+        if (!lower.contains("googlevideo.com") && !lower.contains("videoplayback")) return
+        if (lower.contains("mime=audio") || lower.contains("audio%2f") || lower.contains("/audio")) {
+            capturedAudioUrl.set(url)
+            return
+        }
+        if (lower.contains("mime=video") || lower.contains("video%2f") ||
+            lower.contains("itag=18") || lower.contains("itag=22") ||
+            lower.contains("itag=59") || lower.contains("itag=78")
+        ) {
+            capturedVideoUrl.set(url)
+            return
+        }
+        // Prefer progressive muxed streams when itag unknown
+        if (lower.contains("videoplayback") && !lower.contains("mime=audio")) {
+            if (capturedVideoUrl.get().isNullOrBlank()) {
+                capturedVideoUrl.set(url)
             }
         }
     }

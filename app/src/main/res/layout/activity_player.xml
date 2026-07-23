@@ -148,6 +148,19 @@
                 app:iconPadding="6dp"
                 app:iconTint="@android:color/white"
                 android:textColor="@android:color/white" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/downloadsTabButton"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:fontFamily="@font/outfit_medium"
+                android:text="@string/downloads_title"
+                android:textAllCaps="false"
+                android:textColor="@android:color/white"
+                app:cornerRadius="12dp"
+                app:strokeColor="#66FFFFFF" />
         </LinearLayout>
 
         <LinearLayout

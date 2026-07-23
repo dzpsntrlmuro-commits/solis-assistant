@@ -29,9 +29,23 @@
     <string name="download_video">Video İndir</string>
     <string name="download_mp3">MP3 İndir</string>
     <string name="download_started">İndiriliyor… lütfen bekleyin</string>
-    <string name="download_complete">İndirme tamamlandı · İndirilenler/Murotube</string>
+    <string name="download_complete">İndirme tamamlandı</string>
+    <string name="download_queued">İndirme kuyruğa alındı</string>
     <string name="download_preparing">İndirme hazırlanıyor…</string>
     <string name="download_failed">İndirme başlatılamadı</string>
     <string name="download_no_video">Video dosyası bulunamadı</string>
     <string name="download_no_audio">Ses dosyası bulunamadı</string>
+    <string name="downloads_title">İndirilenler</string>
+    <string name="downloads_subtitle">Durumu buradan takip et</string>
+    <string name="downloads_empty">Henüz indirme yok</string>
+    <string name="downloads_empty_hint">Bir video açıp Video İndir veya MP3 İndir’e bas.</string>
+    <string name="download_open">Aç</string>
+    <string name="download_delete">Sil</string>
+    <string name="download_file_missing">Dosya bulunamadı</string>
+    <string name="download_open_failed">Dosya açılamadı</string>
+    <string name="download_status_queued">Sırada</string>
+    <string name="download_status_downloading">İndiriliyor</string>
+    <string name="download_status_progress">İndiriliyor %1$d%%</string>
+    <string name="download_status_done">Tamamlandı</string>
+    <string name="download_status_failed">Başarısız</string>
 </resources>

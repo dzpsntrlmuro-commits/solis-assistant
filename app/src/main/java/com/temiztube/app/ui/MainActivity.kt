@@ -57,6 +57,12 @@ class MainActivity : AppCompatActivity() {
             showBrowsingChrome()
             viewModel.loadTrending()
         }
+        binding.downloadsButton.setOnClickListener {
+            startActivity(Intent(this, DownloadsActivity::class.java))
+        }
+        binding.landingDownloadsButton.setOnClickListener {
+            startActivity(Intent(this, DownloadsActivity::class.java))
+        }
         binding.retryButton.setOnClickListener {
             if (lastQuery.isBlank()) viewModel.loadTrending() else viewModel.search(lastQuery)
         }
