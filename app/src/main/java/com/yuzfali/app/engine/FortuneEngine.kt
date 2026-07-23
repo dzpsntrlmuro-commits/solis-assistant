@@ -3,7 +3,6 @@ package com.yuzfali.app.engine
 import com.yuzfali.app.model.AnalysisSnapshot
 import com.yuzfali.app.model.FaceMetrics
 import com.yuzfali.app.model.FortuneReport
-import com.yuzfali.app.model.PoseMetrics
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.random.Random
@@ -11,79 +10,56 @@ import kotlin.random.Random
 object FortuneEngine {
 
     fun generate(snapshot: AnalysisSnapshot, scanNonce: Long): FortuneReport {
-        val profile = buildProfile(snapshot.face, snapshot.pose)
+        val face = snapshot.face
+        val profile = buildProfile(face)
         val rng = Random(profile.signature xor scanNonce)
 
         return FortuneReport(
-            faceSection = buildFaceReading(snapshot.face, profile, rng),
-            postureSection = buildPostureReading(snapshot.pose, profile, rng),
-            emotionSection = buildEmotionReading(snapshot.face, snapshot.pose, profile),
-            futureSection = buildFutureReading(snapshot.face, snapshot.pose, profile, rng)
+            gazeSection = buildGazeReading(face, profile),
+            faceSection = buildFaceReading(face, profile, rng),
+            emotionSection = buildEmotionReading(face, profile),
+            futureSection = buildFutureReading(face, profile, rng)
         )
     }
 
     private data class MetricProfile(
         val signature: Long,
+        val gazeIntensity: Int,
+        val eyeOpenness: Int,
+        val eyeBalance: Int,
         val warmth: Int,
-        val focus: Int,
-        val balance: Int,
-        val confidence: Int,
-        val vitality: Int,
-        val introspection: Int,
+        val mystery: Int,
         val expressiveness: Int,
         val destinyNumber: Int
     )
 
-    private fun buildProfile(face: FaceMetrics, pose: PoseMetrics): MetricProfile {
-        val warmth = pct(face.smileProbability * 0.7f + face.smileRange * 0.3f, 0f, 1f)
-        val focus = pct(
-            (face.leftEyeOpen + face.rightEyeOpen) / 2f * 0.55f +
-                (1f - abs(face.headEulerY) / 40f).coerceIn(0f, 1f) * 0.25f +
-                face.eyeSymmetry * 0.2f,
+    private fun buildProfile(face: FaceMetrics): MetricProfile {
+        val eyeOpenness = pct((face.leftEyeOpen + face.rightEyeOpen) / 2f, 0f, 1f)
+        val eyeBalance = pct(face.eyeSymmetry, 0f, 1f)
+        val gazeIntensity = pct(
+            (1f - abs(face.headEulerY) / 40f).coerceIn(0f, 1f) * 0.5f +
+                (1f - abs(face.headEulerX) / 35f).coerceIn(0f, 1f) * 0.3f +
+                eyeOpenness / 100f * 0.2f,
             0f, 1f
         )
-        val balance = pct(
-            face.eyeSymmetry * 0.45f +
-                (1f - face.landmarkAsymmetry * 3.5f).coerceIn(0f, 1f) * 0.35f +
-                (1f - abs(face.headEulerZ) / 30f).coerceIn(0f, 1f) * 0.2f,
+        val warmth = pct(face.smileProbability * 0.75f + face.smileRange * 0.25f, 0f, 1f)
+        val mystery = pct(
+            (1f - face.smileProbability) * 0.4f +
+                abs(face.headEulerY) / 35f * 0.3f +
+                face.landmarkAsymmetry * 0.3f,
             0f, 1f
         )
-        val confidence = if (pose.frameCount == 0) {
-            ((balance + warmth) / 2f).roundToInt()
-        } else {
-            pct(
-                (1f - abs(pose.shoulderTilt) / 20f).coerceIn(0f, 1f) * 0.35f +
-                    (1f - pose.spineAngle / 30f).coerceIn(0f, 1f) * 0.3f +
-                    (1f - pose.headOffset * 2.5f).coerceIn(0f, 1f) * 0.2f +
-                    pose.postureStability * 0.15f,
-                0f, 1f
-            )
-        }
-        val vitality = ((warmth + focus + confidence) / 3f).roundToInt()
-        val introspection = pct(
-            (1f - face.smileProbability) * 0.35f +
-                abs(face.headEulerY) / 35f * 0.25f +
-                face.expressionVolatility * 0.2f +
-                pose.spineAngle / 35f * 0.2f,
-            0f, 1f
-        )
-        val expressiveness = pct(face.smileRange * 0.65f + face.expressionVolatility * 0.35f, 0f, 1f)
+        val expressiveness = pct(face.smileRange * 0.6f + face.expressionVolatility * 0.4f, 0f, 1f)
 
         val destinyNumber = (
             face.smileProbability * 137f +
                 face.eyeDistanceRatio * 311f +
-                face.noseToMouthRatio * 197f +
-                face.mouthWidthRatio * 223f +
-                face.cheekWidthRatio * 179f +
-                face.landmarkAsymmetry * 251f +
-                face.leftEyeOpen * 89f +
-                face.rightEyeOpen * 97f +
-                abs(face.headEulerY) * 3.1f +
-                abs(face.headEulerZ) * 2.7f +
-                pose.shoulderTilt * 1.9f +
-                pose.spineAngle * 2.3f +
-                pose.headOffset * 401f +
-                pose.postureStability * 167f
+                face.leftEyeOpen * 173f +
+                face.rightEyeOpen * 181f +
+                abs(face.headEulerY) * 4.7f +
+                abs(face.headEulerX) * 3.9f +
+                face.landmarkAsymmetry * 241f +
+                face.noseToMouthRatio * 197f
             ).roundToInt().let { (it % 900) + 100 }
 
         val signature = mix(
@@ -91,29 +67,59 @@ object FortuneEngine {
             face.leftEyeOpen,
             face.rightEyeOpen,
             face.eyeDistanceRatio,
-            face.noseToMouthRatio,
-            face.mouthWidthRatio,
-            face.cheekWidthRatio,
-            face.landmarkAsymmetry,
             face.headEulerY,
-            face.headEulerZ,
-            pose.shoulderTilt,
-            pose.spineAngle,
-            pose.headOffset,
-            pose.postureStability
+            face.headEulerX,
+            face.landmarkAsymmetry,
+            face.noseToMouthRatio
         )
 
         return MetricProfile(
             signature = signature,
+            gazeIntensity = gazeIntensity,
+            eyeOpenness = eyeOpenness,
+            eyeBalance = eyeBalance,
             warmth = warmth,
-            focus = focus,
-            balance = balance,
-            confidence = confidence,
-            vitality = vitality,
-            introspection = introspection,
+            mystery = mystery,
             expressiveness = expressiveness,
             destinyNumber = destinyNumber
         )
+    }
+
+    private fun buildGazeReading(face: FaceMetrics, profile: MetricProfile): String {
+        val leftPct = (face.leftEyeOpen * 100).roundToInt()
+        val rightPct = (face.rightEyeOpen * 100).roundToInt()
+        val parts = mutableListOf<String>()
+
+        parts += "Bakış yönünüz ${face.gazeHorizontal} ve ${face.gazeVertical} okunuyor."
+
+        parts += when {
+            profile.gazeIntensity >= 75 -> "Gözleriniz net ve odaklı; bakış gücünüz yüzde ${profile.gazeIntensity}."
+            profile.gazeIntensity >= 45 -> "Bakışınız dengeli ve ölçülü; odak skoru yüzde ${profile.gazeIntensity}."
+            else -> "Gözleriniz yumuşak ve derin; içe dönük bir bakış, skor yüzde ${profile.gazeIntensity}."
+        }
+
+        parts += when {
+            face.eyeDistanceRatio > 0.43f -> "Geniş göz aralığınız (${dec(face.eyeDistanceRatio)}) merak ve keşif arzusunu gösteriyor."
+            face.eyeDistanceRatio in 0.01f..0.33f -> "Dar göz aralığınız (${dec(face.eyeDistanceRatio)}) yoğun konsantrasyon ve detay odaklı zihni simgeliyor."
+            face.eyeDistanceRatio > 0f -> "Göz aralığınız (${dec(face.eyeDistanceRatio)}) analitik ve ölçülü bir bakışa işaret ediyor."
+            else -> "Göz yapınız dikkatli ve seçici bir bakış taşıyor."
+        }
+
+        parts += if (abs(face.leftEyeOpen - face.rightEyeOpen) > 0.12f) {
+            "Sol göz açıklığı %$leftPct, sağ göz %$rightPct; duygusal yükünüz bakışınıza yansıyor."
+        } else {
+            "İki gözünüz de dengeli (sol %$leftPct, sağ %$rightPct); bakış simetriniz yüzde ${profile.eyeBalance}."
+        }
+
+        parts += when {
+            face.headEulerY > 12f -> "Hafif yana bakan gözleriniz geleceğe açık, yeni fikirlere meraklı bir ruhu anlatıyor."
+            face.headEulerY < -12f -> "İçe dönük bakışınız derin düşünce ve sezgisel gücü öne çıkarıyor."
+            face.headEulerX > 10f -> "Yukarı bakan bakışınız umut ve vizyon dolu bir gelecek arayışını gösteriyor."
+            face.headEulerX < -10f -> "Aşağı eğik bakışınız hassasiyet ve içsel sorgulamayı yansıtıyor."
+            else -> "Düz ileri bakan gözleriniz kararlılık ve net hedef duygusunu taşıyor."
+        }
+
+        return parts.joinToString(" ")
     }
 
     private fun buildFaceReading(face: FaceMetrics, profile: MetricProfile, rng: Random): String {
@@ -121,30 +127,21 @@ object FortuneEngine {
         val parts = mutableListOf<String>()
 
         parts += when {
-            profile.warmth >= 78 -> "Gülümseme yoğunluğunuz %$smilePct; sıcak ve davetkâr bir ifade okunuyor."
-            profile.warmth >= 52 -> "Gülümseme seviyeniz %$smilePct; neşe ile ciddiyet arasında dengeli bir çizgi."
-            profile.warmth >= 30 -> "İfadeniz %$smilePct gülümseme ile ölçüldü; düşünceli ve mesafeli bir hava var."
-            else -> "Yüz ifadeniz %$smilePct gülümseme ile içe dönük; derin odak ve gözlem gücü öne çıkıyor."
+            profile.warmth >= 75 -> "Yüz ifadeniz sıcak; gülümseme yoğunluğu %$smilePct."
+            profile.warmth >= 45 -> "İfadeniz dengeli; gülümseme seviyesi %$smilePct."
+            else -> "Yüzünüz ciddi ve düşünceli; gülümseme %$smilePct ile ölçüldü."
         }
 
         parts += when {
-            face.faceRatio > 0.90f -> "Yüz genişliği/yüksekliği oranı ${dec(face.faceRatio)} — belirgin ve güçlü bir yüz hatları yapısı."
-            face.faceRatio < 0.74f -> "Yüz oranınız ${dec(face.faceRatio)} — ince, uzun ve sezgisel bir profil."
-            else -> "Yüz oranınız ${dec(face.faceRatio)} — dengeli oval bir form."
-        }
-
-        if (face.eyeDistanceRatio > 0f) {
-            parts += when {
-                face.eyeDistanceRatio > 0.43f -> "Göz aralığı oranı ${dec(face.eyeDistanceRatio)}; meraklı ve keşfedici bir bakış."
-                face.eyeDistanceRatio < 0.33f -> "Göz aralığı oranı ${dec(face.eyeDistanceRatio)}; yoğun konsantrasyon ve detay odaklı zihin."
-                else -> "Göz aralığı oranı ${dec(face.eyeDistanceRatio)}; ölçülü ve analitik bir bakış."
-            }
+            face.faceRatio > 0.90f -> "Yüz oranınız ${dec(face.faceRatio)}; güçlü ve belirgin hatlar."
+            face.faceRatio < 0.74f -> "Yüz oranınız ${dec(face.faceRatio)}; ince ve sezgisel bir profil."
+            else -> "Yüz oranınız ${dec(face.faceRatio)}; dengeli oval form."
         }
 
         if (face.noseToMouthRatio > 0f) {
             parts += when {
-                face.noseToMouthRatio > 0.64f -> "Burun-dudak oranı ${dec(face.noseToMouthRatio)}; sabırlı, planlı karar alırsınız."
-                face.noseToMouthRatio < 0.47f -> "Burun-dudak oranı ${dec(face.noseToMouthRatio)}; hızlı refleks ve ani kararlar."
+                face.noseToMouthRatio > 0.64f -> "Burun-dudak oranı ${dec(face.noseToMouthRatio)}; sabırlı ve stratejik karakter."
+                face.noseToMouthRatio < 0.47f -> "Burun-dudak oranı ${dec(face.noseToMouthRatio)}; hızlı karar alan yapı."
                 else -> "Burun-dudak oranı ${dec(face.noseToMouthRatio)}; düşünce ve eylem uyumu güçlü."
             }
         }
@@ -157,104 +154,47 @@ object FortuneEngine {
             }
         }
 
-        parts += "Göz simetriniz %${(face.eyeSymmetry * 100).roundToInt()}, yüz asimetrisi ${dec(face.landmarkAsymmetry * 100f)} puan."
-
-        val headY = abs(face.headEulerY)
-        val headZ = abs(face.headEulerZ)
-        parts += when {
-            headY > 14f -> "Baş yönünüz Y ekseninde ${dec(headY)}° eğimli; yaratıcı sorgulama enerjisi."
-            headZ > 10f -> "Baş eğiminiz Z ekseninde ${dec(headZ)}°; kararlı ve dirençli yapı."
-            else -> "Baş açılarınız Y ${dec(headY)}°, Z ${dec(headZ)}°; odaklı ve dengeli duruş."
+        parts += if (profile.mystery > 60) {
+            "Yüzünüzde gizemli bir aura var; her bakışta yeni bir katman okunuyor."
+        } else {
+            "Yüz ifadeniz açık ve okunaklı; samimiyetiniz güçlü."
         }
-
-        val cheekLines = listOf(
-            "Elmacık hattı oranı ${dec(face.cheekWidthRatio)}; sosyal çevrede fark edilirsiniz.",
-            "İfade değişkenliği %${(face.expressionVolatility * 100).roundToInt()}; duygularınız ${if (profile.expressiveness > 55) "yüzünüze hızlı yansır" else "içten yaşanır"}.",
-            "Gülümseme aralığınız %${(face.smileRange * 100).roundToInt()}; ${if (face.smileRange > 0.18f) "canlı mimikler" else "kontrollü ifade"} sergilersiniz."
-        )
-        parts += cheekLines[(profile.warmth + rng.nextInt(3)) % cheekLines.size]
-
-        return parts.joinToString(" ")
-    }
-
-    private fun buildPostureReading(pose: PoseMetrics, profile: MetricProfile, rng: Random): String {
-        if (pose.frameCount == 0) {
-            return "Omuz ve üst gövde bu taramada net okunamadı; rapor yüz ölçümlerine göre oluşturuldu."
-        }
-
-        val parts = mutableListOf<String>()
-        val tilt = dec(pose.shoulderTilt)
-        val spine = dec(pose.spineAngle)
-
-        parts += when {
-            abs(pose.shoulderTilt) < 3.5f -> "Omuz hattı neredeyse düz (${tilt}°); özgüven skoru %${profile.confidence}."
-            pose.shoulderTilt > 3.5f -> "Sağ omuz ${tilt}° yüksekte; koruyucu ve sorumluluk alan duruş."
-            else -> "Sol omuz ${dec(abs(pose.shoulderTilt))}° önde; sezgisel ve yaratıcı enerji baskın."
-        }
-
-        parts += when {
-            pose.spineAngle < 6.5f -> "Omurga açısı ${spine}° ile dik; dayanıklılık yüksek."
-            pose.spineAngle < 15f -> "Omurga eğimi ${spine}° ile rahat; esnek ve uyumlu."
-            else -> "Omurga eğimi ${spine}° ile belirgin; zihinsel yük veya yorgunluk sinyali."
-        }
-
-        val alignPct = pct(1f - pose.headOffset.coerceIn(0f, 0.4f) / 0.4f, 0f, 1f)
-        parts += "Baş-omuz hizası %$alignPct, duruş istikrarı %${(pose.postureStability * 100).roundToInt()}."
 
         val extras = listOf(
-            "Omuz genişliği ölçümü ${pose.shoulderWidth.roundToInt()} px referans; beden dili ${if (pose.confidence > 0.72f) "net" else "yumuşak"}.",
-            "Duruş güveni %${(pose.confidence * 100).roundToInt()}; ${pose.frameCount} kare boyunca analiz edildi.",
-            "Postür skorunuz %${profile.confidence}; omuz ve omurga verileri birlikte değerlendirildi."
+            "Gülümseme aralığınız %${(face.smileRange * 100).roundToInt()}; ${if (profile.expressiveness > 55) "canlı mimikler" else "kontrollü ifade"}.",
+            "Yüz asimetrisi ${dec(face.landmarkAsymmetry * 100f)} puan; duygusal derinlik ${if (face.landmarkAsymmetry > 0.08f) "yüksek" else "dengeli"}.",
+            "Elmacık hattı oranı ${dec(face.cheekWidthRatio)}; sosyal çekim ${if (face.cheekWidthRatio > 1.5f) "güçlü" else "sakin"}."
         )
-        parts += extras[(profile.confidence + rng.nextInt(5)) % extras.size]
+        parts += extras[(profile.warmth + rng.nextInt(3)) % extras.size]
 
         return parts.joinToString(" ")
     }
 
-    private fun buildEmotionReading(face: FaceMetrics, pose: PoseMetrics, profile: MetricProfile): String {
-        val leftEye = (face.leftEyeOpen * 100).roundToInt()
-        val rightEye = (face.rightEyeOpen * 100).roundToInt()
-
+    private fun buildEmotionReading(face: FaceMetrics, profile: MetricProfile): String {
         val mood = when {
-            profile.warmth > 72 && profile.balance > 68 -> "açık, sıcak ve dengeli"
-            profile.warmth < 32 && profile.introspection > 62 -> "içe dönük ve hassas"
+            profile.warmth > 72 && profile.eyeBalance > 65 -> "sıcak, açık ve dengeli"
+            profile.warmth < 32 && profile.mystery > 60 -> "içe dönük ve hassas"
             face.leftEyeOpen < 0.42f || face.rightEyeOpen < 0.42f -> "yorgun ama dirençli"
             profile.expressiveness > 68 -> "canlı ve değişken"
-            profile.confidence > 68 -> "kendinden emin ve sakin"
-            profile.introspection > 60 -> "derin düşünce içinde"
+            profile.gazeIntensity > 68 -> "odaklı ve kararlı"
             else -> "duygusal geçiş döneminde"
         }
 
-        val bodyNote = when {
-            pose.frameCount == 0 -> "Beden verisi sınırlı; duygu okuması yüze dayanıyor."
-            pose.spineAngle > 17f -> "Omurga eğimi duygusal yükü artırıyor olabilir."
-            abs(pose.shoulderTilt) > 9f -> "Omuz gerginliği stres sinyali veriyor."
-            pose.postureStability < 0.45f -> "Hareketli tarama; duygusal dalgalanma yüksek."
-            else -> "Beden duruşunuz duygusal dengeyi destekliyor."
-        }
-
         return buildString {
-            append("Anlık ruh hâliniz $mood. ")
-            append("Enerji %${profile.vitality}, denge %${profile.balance}, içe dönüklük %${profile.introspection}. ")
-            append("Sol göz %$leftEye, sağ göz %$rightEye açıklığında. ")
-            append(bodyNote)
-            append(" ")
-            append("Gülümseme min %${(face.smileMin * 100).roundToInt()}, max %${(face.smileMax * 100).roundToInt()}.")
+            append("Gözlerinizden okunan duygu hâli: $mood. ")
+            append("Bakış enerjisi yüzde ${profile.gazeIntensity}, yüz sıcaklığı yüzde ${profile.warmth}. ")
+            append("Gülümseme min %${(face.smileMin * 100).roundToInt()}, max %${(face.smileMax * 100).roundToInt()}. ")
+            append(if (profile.mystery > 55) "Derin bakışlarınız sezgilerinizin güçlü olduğunu gösteriyor." else "Açık bakışınız güven veren bir enerji taşıyor.")
         }
     }
 
-    private fun buildFutureReading(
-        face: FaceMetrics,
-        pose: PoseMetrics,
-        profile: MetricProfile,
-        rng: Random
-    ): String {
+    private fun buildFutureReading(face: FaceMetrics, profile: MetricProfile, rng: Random): String {
         val fortuneScore = (
-            profile.warmth * 0.21f +
-                profile.focus * 0.19f +
-                profile.balance * 0.18f +
-                profile.confidence * 0.22f +
-                profile.vitality * 0.20f
+            profile.gazeIntensity * 0.28f +
+                profile.eyeBalance * 0.22f +
+                profile.warmth * 0.22f +
+                profile.expressiveness * 0.14f +
+                (100 - profile.mystery) * 0.14f
             ).roundToInt().coerceIn(34, 97)
 
         val timings = listOf(
@@ -267,65 +207,51 @@ object FortuneEngine {
         )
         val timing = timings[pick(profile.destinyNumber, timings.size, rng.nextInt(9))]
 
-        val careers = listOf(
-            "iş veya eğitimde beklenmedik bir teklif",
-            "ertelediğiniz bir projenin hızlanması",
-            "yeni bir iş birliği fırsatı",
-            "yeteneğinizin fark edilmesi",
-            "finansal rahatlama getiren bir gelişme",
-            "yeni bir beceri öğrenme dönemi",
-            "terfi veya sorumluluk artışı",
-            "girişim veya yan proje için uygun zaman",
-            "eski bir bağlantıdan gelen fırsat"
+        val futures = listOf(
+            "bakışlarınızın çektiği biri hayatınıza girebilir",
+            "gözlerinizin gördüğü bir fırsatı değerlendirme zamanı geliyor",
+            "sezgileriniz sizi doğru bir karara yönlendirecek",
+            "yüzünüzdeki özgüven yeni kapılar açacak",
+            "göz teması kurduğunuz biriyle önemli bir bağ kurulabilir",
+            "içten gülümsemeniz çevrenizde olumlu dalgalar yaratacak",
+            "bakışlarınızdaki kararlılık kariyerinizde fark yaratacak",
+            "gözlerinizin seçiciliği sizi yanlış yoldan koruyacak",
+            "yüz ifadenizdeki sıcaklık ilişkilerinizi güçlendirecek"
         )
+
         val loves = listOf(
-            "ilişkilerde daha açık iletişim",
-            "yeni bir tanışıklık",
-            "mevcut bağın derinleşmesi",
-            "aile içinde yakınlaşma",
-            "duygusal özgürlük hissi",
-            "kalp konusunda net karar",
-            "eski bir hesaplaşmanın kapanması",
-            "sürpriz bir romantik gelişme",
-            "kendinize zaman ayırmanın ilişkinize iyi gelmesi"
-        )
-        val healths = listOf(
-            "düzenli uyku ve yürüyüş size iyi gelecek",
-            "stres yönetimi öncelik olmalı",
-            "enerjiniz yükselişte; tempoyu koruyun",
-            "boyun ve omuzlara dikkat edin",
-            "beslenmede küçük düzenleme büyük fark yaratır",
-            "su tüketimini artırmanız faydalı",
-            "kısa molalar vererek verim artacak",
-            "esneme hareketleri rahatlatacak",
-            "dijital ekran molası ihtiyacı var"
+            "gözlerinizle kurduğunuz bağ derinleşebilir",
+            "bakışlarınız yeni bir aşka işaret ediyor",
+            "göz temasıyla kurulan güven ilişkinizi güçlendirecek",
+            "içten bir gülümseme kalp kapılarını açacak",
+            "sezgisel bakışlarınız doğru kişiyi tanımanızı sağlayacak",
+            "duygusal açıklığınız ilişkilerde dönüm noktası getirecek"
         )
 
-        val careerIdx = pick(profile.confidence + profile.destinyNumber, careers.size, face.noseToMouthRatio.roundToInt())
-        val loveIdx = pick(profile.warmth + profile.destinyNumber, loves.size, (face.smileProbability * 100).roundToInt())
-        val healthIdx = when {
-            pose.frameCount > 0 && pose.spineAngle > 16f -> 3
-            profile.vitality < 40 -> 1
-            profile.vitality > 75 -> 2
-            else -> pick(profile.vitality + profile.destinyNumber, healths.size, rng.nextInt(11))
-        }
+        val insights = listOf(
+            "gözleriniz geleceği önceden seziyor gibi",
+            "bakışlarınızdaki netlik zor günlerde size rehberlik edecek",
+            "yüz ifadenizdeki enerji çevrenizi etkilemeye devam edecek",
+            "gözlerinizin derinliği gizli yeteneklerinizi ortaya çıkaracak",
+            "bakışlarınızdaki umut zorlu dönemleri aşmanıza yardım edecek"
+        )
 
-        val career = careers[careerIdx]
-        val love = loves[loveIdx]
-        val health = healths[healthIdx]
+        val future = futures[pick(profile.destinyNumber + profile.gazeIntensity, futures.size, rng.nextInt(7))]
+        val love = loves[pick(profile.warmth + profile.eyeBalance, loves.size, rng.nextInt(5))]
+        val insight = insights[pick(profile.mystery + profile.destinyNumber, insights.size, rng.nextInt(11))]
 
         val tone = when {
-            fortuneScore > 82 -> "Güçlü bir dönem sizi bekliyor."
-            fortuneScore > 65 -> "Olumlu gelişmeler mümkün."
-            fortuneScore > 48 -> "Sabırla ilerlerseniz kapılar açılır."
-            else -> "Zorlayıcı ama öğretici bir süreç."
+            fortuneScore > 82 -> "Gözlerinizden güçlü bir dönem okunuyor."
+            fortuneScore > 65 -> "Bakışlarınız olumlu gelişmelere işaret ediyor."
+            fortuneScore > 48 -> "Sabırlı bakışlarınız meyvesini verecek."
+            else -> "İçe dönük döneminiz sizi olgunlaştıracak."
         }
 
         return buildString {
             append("Kader numaranız ${profile.destinyNumber}, fal skoru $fortuneScore/100. ")
-            append("$timing $career ile karşılaşabilirsiniz. ")
-            append("Aşk ve ilişkilerde $love öngörülüyor. ")
-            append("Sağlık: $health. ")
+            append("$timing $future. ")
+            append("Aşk ve ilişkilerde $love. ")
+            append("$insight ")
             append(tone)
         }
     }

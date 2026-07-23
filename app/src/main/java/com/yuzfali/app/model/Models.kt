@@ -27,26 +27,29 @@ data class FaceMetrics(
 
     val smileRange: Float
         get() = (smileMax - smileMin).coerceAtLeast(0f)
+
+    val gazeHorizontal: String
+        get() = when {
+            headEulerY > 12f -> "sağa"
+            headEulerY < -12f -> "sola"
+            else -> "düz ileri"
+        }
+
+    val gazeVertical: String
+        get() = when {
+            headEulerX > 10f -> "yukarı"
+            headEulerX < -10f -> "aşağı"
+            else -> "horizon hizasında"
+        }
 }
 
-data class PoseMetrics(
-    val shoulderTilt: Float = 0f,
-    val spineAngle: Float = 0f,
-    val shoulderWidth: Float = 0f,
-    val headOffset: Float = 0f,
-    val confidence: Float = 0f,
-    val postureStability: Float = 0f,
-    val frameCount: Int = 0
-)
-
 data class AnalysisSnapshot(
-    val face: FaceMetrics = FaceMetrics(),
-    val pose: PoseMetrics = PoseMetrics()
+    val face: FaceMetrics = FaceMetrics()
 )
 
 data class FortuneReport(
+    val gazeSection: String,
     val faceSection: String,
-    val postureSection: String,
     val emotionSection: String,
     val futureSection: String
 )

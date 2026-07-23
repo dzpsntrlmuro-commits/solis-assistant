@@ -16,7 +16,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.yuzfali.app.R
-import com.yuzfali.app.analysis.FacePoseAnalyzer
+import com.yuzfali.app.analysis.FaceAnalyzer
 import com.yuzfali.app.databinding.ActivityMainBinding
 import com.yuzfali.app.engine.FortuneEngine
 import com.yuzfali.app.model.FortuneReport
@@ -30,7 +30,7 @@ import java.util.concurrent.Executors
 class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private lateinit var binding: ActivityMainBinding
-    private val analyzer = FacePoseAnalyzer()
+    private val analyzer = FaceAnalyzer()
     private val cameraExecutor = Executors.newSingleThreadExecutor()
 
     private var textToSpeech: TextToSpeech? = null
@@ -43,9 +43,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) {
-            startCamera()
-        } else {
+        if (granted) startCamera() else {
             binding.tvStatus.text = getString(R.string.status_permission)
             Toast.makeText(this, R.string.status_permission, Toast.LENGTH_LONG).show()
         }
@@ -63,21 +61,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun setupUi() {
-        binding.btnAction.setOnClickListener {
-            if (isScanning) stopScan() else startScan()
-        }
-        binding.btnSpeak.setOnClickListener {
-            if (isSpeaking) stopSpeaking() else speakFuture()
-        }
-        binding.btnRetry.setOnClickListener {
-            resetToScan()
-        }
+        binding.btnAction.setOnClickListener { if (isScanning) stopScan() else startScan() }
+        binding.btnSpeak.setOnClickListener { if (isSpeaking) stopSpeaking() else speakFuture() }
+        binding.btnRetry.setOnClickListener { resetToScan() }
     }
 
     private fun checkPermissions() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
-            PackageManager.PERMISSION_GRANTED
-        ) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
             startCamera()
         } else {
             permissionLauncher.launch(Manifest.permission.CAMERA)
@@ -93,7 +83,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             val preview = Preview.Builder().build().also {
                 it.setSurfaceProvider(binding.previewView.surfaceProvider)
             }
-
             val imageAnalysis = ImageAnalysis.Builder()
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
@@ -113,12 +102,14 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                         }
                     }
                 }
-
-            val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
-
             try {
                 cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalysis)
+                cameraProvider.bindToLifecycle(
+                    this,
+                    CameraSelector.DEFAULT_FRONT_CAMERA,
+                    preview,
+                    imageAnalysis
+                )
             } catch (e: Exception) {
                 Toast.makeText(this, "Kamera başlatılamadı: ${e.message}", Toast.LENGTH_LONG).show()
             }
@@ -138,9 +129,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         scanJob = lifecycleScope.launch {
             delay(SCAN_DURATION_MS)
-            if (isActive && isScanning) {
-                finishScan()
-            }
+            if (isActive && isScanning) finishScan()
         }
     }
 
@@ -171,11 +160,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun showReport(report: FortuneReport) {
+        binding.tvGazeReport.text = report.gazeSection
         binding.tvFaceReport.text = report.faceSection
-        binding.tvPostureReport.text = report.postureSection
         binding.tvEmotionReport.text = report.emotionSection
         binding.tvFutureReport.text = report.futureSection
-
         binding.reportScroll.isVisible = true
         binding.reportActions.isVisible = true
 
@@ -183,9 +171,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val params = panel.layoutParams
         params.height = (resources.displayMetrics.heightPixels * 0.55f).toInt()
         panel.layoutParams = params
-        binding.reportScroll.layoutParams.height = params.height - resources.getDimensionPixelSize(
-            com.google.android.material.R.dimen.mtrl_btn_padding_bottom
-        ) * 6
     }
 
     private fun resetToScan() {
@@ -195,11 +180,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         binding.reportScroll.isVisible = false
         binding.reportActions.isVisible = false
         binding.tvStatus.text = getString(R.string.status_ready)
-
-        val panel = binding.bottomPanel
-        val params = panel.layoutParams
-        params.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
-        panel.layoutParams = params
+        binding.bottomPanel.layoutParams.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
     }
 
     private fun clearLegacyFaceData() {
@@ -228,10 +209,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
-            val turkish = Locale("tr", "TR")
-            val result = textToSpeech?.setLanguage(turkish)
-            ttsReady = result != TextToSpeech.LANG_MISSING_DATA &&
-                result != TextToSpeech.LANG_NOT_SUPPORTED
+            val result = textToSpeech?.setLanguage(Locale("tr", "TR"))
+            ttsReady = result != TextToSpeech.LANG_MISSING_DATA && result != TextToSpeech.LANG_NOT_SUPPORTED
             textToSpeech?.setSpeechRate(0.92f)
             textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                 override fun onStart(utteranceId: String?) = Unit
