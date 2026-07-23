@@ -25,3 +25,14 @@ data class PlayableStream(
     val uploader: String,
     val qualityLabel: String
 )
+
+/** Progressive file URLs suitable for DownloadManager (not HLS/DASH). */
+data class DownloadAssets(
+    val title: String,
+    val videoUrl: String?,
+    val videoFileName: String,
+    val videoMime: String,
+    val audioUrl: String?,
+    val audioFileName: String,
+    val audioMime: String
+)

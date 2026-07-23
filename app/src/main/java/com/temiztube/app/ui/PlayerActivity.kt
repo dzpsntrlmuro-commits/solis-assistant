@@ -15,9 +15,9 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -37,8 +37,10 @@ import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.ui.PlayerView
 import com.temiztube.app.R
 import com.temiztube.app.data.AdBlockFilter
+import com.temiztube.app.data.MediaDownloader
 import com.temiztube.app.data.YoutubeRepository
 import com.temiztube.app.databinding.ActivityPlayerBinding
+import com.temiztube.app.model.DownloadAssets
 import com.temiztube.app.model.PlayableStream
 import com.temiztube.app.model.StreamKind
 import kotlinx.coroutines.Job
@@ -59,6 +61,8 @@ class PlayerActivity : AppCompatActivity() {
     private var isFullscreen = false
     private var webCustomView: View? = null
     private var webCustomViewCallback: WebChromeClient.CustomViewCallback? = null
+    private var downloadAssets: DownloadAssets? = null
+    private var downloadJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,6 +83,8 @@ class PlayerActivity : AppCompatActivity() {
         binding.fullscreenButton.setOnClickListener { toggleFullscreen() }
         binding.retryButton.setOnClickListener { startFastPlayback() }
         binding.webFallbackButton.isVisible = false
+        binding.downloadVideoButton.setOnClickListener { startDownload(video = true) }
+        binding.downloadMp3Button.setOnClickListener { startDownload(video = false) }
 
         binding.playerView.setFullscreenButtonClickListener { enter ->
             if (enter) enterFullscreen() else exitFullscreen()
@@ -402,6 +408,72 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
+    private fun startDownload(video: Boolean) {
+        if (videoUrl.isBlank()) {
+            Toast.makeText(this, R.string.download_failed, Toast.LENGTH_SHORT).show()
+            return
+        }
+        downloadJob?.cancel()
+        Toast.makeText(this, R.string.download_preparing, Toast.LENGTH_SHORT).show()
+        binding.downloadVideoButton.isEnabled = false
+        binding.downloadMp3Button.isEnabled = false
+
+        downloadJob = lifecycleScope.launch {
+            val assets = downloadAssets ?: runCatching {
+                repository.resolveDownloadAssets(videoUrl)
+            }.getOrElse {
+                binding.downloadVideoButton.isEnabled = true
+                binding.downloadMp3Button.isEnabled = true
+                Toast.makeText(
+                    this@PlayerActivity,
+                    it.message ?: getString(R.string.download_failed),
+                    Toast.LENGTH_LONG
+                ).show()
+                return@launch
+            }.also { downloadAssets = it }
+
+            binding.downloadVideoButton.isEnabled = true
+            binding.downloadMp3Button.isEnabled = true
+
+            try {
+                if (video) {
+                    val url = assets.videoUrl
+                    if (url.isNullOrBlank()) {
+                        Toast.makeText(this@PlayerActivity, R.string.download_no_video, Toast.LENGTH_SHORT).show()
+                        return@launch
+                    }
+                    MediaDownloader.enqueue(
+                        context = this@PlayerActivity,
+                        url = url,
+                        fileName = assets.videoFileName,
+                        mimeType = assets.videoMime,
+                        notificationTitle = assets.title
+                    )
+                } else {
+                    val url = assets.audioUrl
+                    if (url.isNullOrBlank()) {
+                        Toast.makeText(this@PlayerActivity, R.string.download_no_audio, Toast.LENGTH_SHORT).show()
+                        return@launch
+                    }
+                    MediaDownloader.enqueue(
+                        context = this@PlayerActivity,
+                        url = url,
+                        fileName = assets.audioFileName,
+                        mimeType = assets.audioMime,
+                        notificationTitle = "${assets.title} (MP3)"
+                    )
+                }
+                Toast.makeText(this@PlayerActivity, R.string.download_started, Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                Toast.makeText(
+                    this@PlayerActivity,
+                    e.message ?: getString(R.string.download_failed),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
     private fun showError(message: String) {
         binding.playerError.text = message
         binding.playerError.isVisible = true
@@ -431,6 +503,7 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         resolveJob?.cancel()
+        downloadJob?.cancel()
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         releasePlayer()
         removeWebView()

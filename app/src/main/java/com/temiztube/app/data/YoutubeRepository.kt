@@ -1,5 +1,6 @@
 package com.temiztube.app.data
 
+import com.temiztube.app.model.DownloadAssets
 import com.temiztube.app.model.PlayableStream
 import com.temiztube.app.model.VideoItem
 import kotlinx.coroutines.Dispatchers
@@ -26,14 +27,19 @@ class YoutubeRepository {
         extractor.initialPage.items.mapNotNull { it.toVideoItem() }
     }
 
-    /**
-     * Fast path only — Piped race, max 5 seconds. No slow NewPipe fallback.
-     */
     suspend fun resolvePlayableFast(url: String): PlayableStream {
         val videoId = extractVideoId(url)
             ?: throw IllegalArgumentException("Geçersiz video bağlantısı")
         return withTimeout(5_000) {
             PipedClient.resolveStreamFast(videoId)
+        }
+    }
+
+    suspend fun resolveDownloadAssets(url: String): DownloadAssets {
+        val videoId = extractVideoId(url)
+            ?: throw IllegalArgumentException("Geçersiz video bağlantısı")
+        return withTimeout(12_000) {
+            PipedClient.resolveDownloadAssets(videoId)
         }
     }
 
