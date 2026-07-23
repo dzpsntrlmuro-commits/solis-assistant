@@ -1,13 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="bg_dark">#0B1220</color>
-    <color name="panel">#152238</color>
-    <color name="panel_soft">#1E2F4A</color>
-    <color name="accent">#22C55E</color>
-    <color name="accent_soft">#86EFAC</color>
-    <color name="amber">#F59E0B</color>
-    <color name="cream_text">#F8FAFC</color>
-    <color name="muted_text">#94A3B8</color>
-    <color name="white">#FFFFFF</color>
-    <color name="overlay_box">#22C55E</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="accent">#FF2D6A4F</color>
+    <color name="bg">#FF0B1020</color>
 </resources>
