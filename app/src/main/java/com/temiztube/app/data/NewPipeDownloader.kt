@@ -9,7 +9,7 @@ import org.schabi.newpipe.extractor.exceptions.ReCaptchaException
 import java.util.concurrent.TimeUnit
 
 /**
- * OkHttp-backed downloader for NewPipe Extractor (search only).
+ * OkHttp-backed downloader for NewPipe Extractor.
  */
 class NewPipeDownloader private constructor(
     private val client: OkHttpClient
@@ -78,8 +78,11 @@ class NewPipeDownloader private constructor(
             return instance ?: synchronized(this) {
                 instance ?: NewPipeDownloader(
                     OkHttpClient.Builder()
-                        .readTimeout(20, TimeUnit.SECONDS)
-                        .connectTimeout(15, TimeUnit.SECONDS)
+                        .readTimeout(30, TimeUnit.SECONDS)
+                        .connectTimeout(20, TimeUnit.SECONDS)
+                        .callTimeout(45, TimeUnit.SECONDS)
+                        .followRedirects(true)
+                        .followSslRedirects(true)
                         .build()
                 ).also { instance = it }
             }

@@ -28,7 +28,8 @@
     <string name="landing_cta">Aramaya başla</string>
     <string name="download_video">Video İndir</string>
     <string name="download_mp3">MP3 İndir</string>
-    <string name="download_started">İndirme başladı · İndirilenler/Murotube</string>
+    <string name="download_started">İndiriliyor… lütfen bekleyin</string>
+    <string name="download_complete">İndirme tamamlandı · İndirilenler/Murotube</string>
     <string name="download_preparing">İndirme hazırlanıyor…</string>
     <string name="download_failed">İndirme başlatılamadı</string>
     <string name="download_no_video">Video dosyası bulunamadı</string>

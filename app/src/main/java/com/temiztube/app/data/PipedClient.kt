@@ -19,12 +19,14 @@ import kotlin.math.abs
 object PipedClient {
 
     private val instances = listOf(
-        "https://pipedapi.kavin.rocks",
         "https://api.piped.private.coffee",
-        "https://pipedapi.adminforge.de",
+        "https://pipedapi.kavin.rocks",
         "https://pipedapi.reallyaweso.me",
         "https://pipedapi.ducks.party",
-        "https://pipedapi.colinslegacy.com"
+        "https://pipedapi.adminforge.de",
+        "https://pipedapi.colinslegacy.com",
+        "https://pipedapi.r4fo.com",
+        "https://pipedapi.darkness.services"
     )
 
     private val playClient = OkHttpClient.Builder()
@@ -71,7 +73,11 @@ object PipedClient {
                 launch {
                     runCatching {
                         parseDownloadAssets(fetchJson(downloadClient, base.trimEnd('/'), videoId))
-                    }.onSuccess { results.trySend(it) }
+                    }.onSuccess { assets ->
+                        if (!assets.videoUrl.isNullOrBlank() || !assets.audioUrl.isNullOrBlank()) {
+                            results.trySend(assets)
+                        }
+                    }
                 }
             }
             try {
@@ -86,7 +92,7 @@ object PipedClient {
     private fun fetchJson(client: OkHttpClient, base: String, videoId: String): JSONObject {
         val request = Request.Builder()
             .url("$base/streams/$videoId")
-            .header("User-Agent", "Murotube/1.6")
+            .header("User-Agent", "Murotube/1.7")
             .header("Accept", "application/json")
             .get()
             .build()
@@ -208,7 +214,11 @@ object PipedClient {
             audioUrl = audio?.url,
             audioFileName = MediaDownloader.sanitizeFileName(title, audioFileExt),
             audioMime = audioMime
-        )
+        ).also {
+            if (it.videoUrl.isNullOrBlank() && it.audioUrl.isNullOrBlank()) {
+                throw IllegalStateException("İndirilebilir akış yok")
+            }
+        }
     }
 
     private data class AudioPick(val url: String, val ext: String, val mime: String)

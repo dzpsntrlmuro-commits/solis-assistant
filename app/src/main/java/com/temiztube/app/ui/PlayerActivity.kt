@@ -63,6 +63,7 @@ class PlayerActivity : AppCompatActivity() {
     private var webCustomViewCallback: WebChromeClient.CustomViewCallback? = null
     private var downloadAssets: DownloadAssets? = null
     private var downloadJob: Job? = null
+    private var currentPlayable: PlayableStream? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -337,11 +338,33 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun startExoPlayer(stream: PlayableStream) {
         usingExo = true
+        currentPlayable = stream
         removeWebView()
         binding.playerView.isVisible = true
         binding.streamLoading.isVisible = true
         binding.playerError.isVisible = false
 
+        repository.downloadAssetsFromPlayable(stream)?.let { fromPlayable ->
+            val existing = downloadAssets
+            downloadAssets = if (existing == null) {
+                fromPlayable
+            } else {
+                existing.copy(
+                    videoUrl = existing.videoUrl ?: fromPlayable.videoUrl,
+                    videoFileName = if (existing.videoUrl.isNullOrBlank()) {
+                        fromPlayable.videoFileName
+                    } else {
+                        existing.videoFileName
+                    },
+                    audioUrl = existing.audioUrl ?: fromPlayable.audioUrl,
+                    audioFileName = if (existing.audioUrl.isNullOrBlank()) {
+                        fromPlayable.audioFileName
+                    } else {
+                        existing.audioFileName
+                    }
+                )
+            }
+        }
         val httpFactory = DefaultHttpDataSource.Factory()
             .setUserAgent(USER_AGENT)
             .setAllowCrossProtocolRedirects(true)
@@ -419,57 +442,78 @@ class PlayerActivity : AppCompatActivity() {
         binding.downloadMp3Button.isEnabled = false
 
         downloadJob = lifecycleScope.launch {
-            val assets = downloadAssets ?: runCatching {
-                repository.resolveDownloadAssets(videoUrl)
-            }.getOrElse {
+            var assets = downloadAssets
+                ?: runCatching { repository.resolveDownloadAssets(videoUrl) }.getOrNull()
+                ?: currentPlayable?.let { repository.downloadAssetsFromPlayable(it) }
+
+            if (assets != null) {
+                downloadAssets = assets
+            }
+
+            if (assets == null) {
                 binding.downloadVideoButton.isEnabled = true
                 binding.downloadMp3Button.isEnabled = true
-                Toast.makeText(
-                    this@PlayerActivity,
-                    it.message ?: getString(R.string.download_failed),
-                    Toast.LENGTH_LONG
-                ).show()
+                Toast.makeText(this@PlayerActivity, R.string.download_failed, Toast.LENGTH_LONG).show()
                 return@launch
-            }.also { downloadAssets = it }
-
-            binding.downloadVideoButton.isEnabled = true
-            binding.downloadMp3Button.isEnabled = true
+            }
 
             try {
+                val url: String?
+                val fileName: String
+                val mime: String
                 if (video) {
-                    val url = assets.videoUrl
+                    url = assets.videoUrl
+                    fileName = assets.videoFileName
+                    mime = assets.videoMime
                     if (url.isNullOrBlank()) {
                         Toast.makeText(this@PlayerActivity, R.string.download_no_video, Toast.LENGTH_SHORT).show()
                         return@launch
                     }
-                    MediaDownloader.enqueue(
-                        context = this@PlayerActivity,
-                        url = url,
-                        fileName = assets.videoFileName,
-                        mimeType = assets.videoMime,
-                        notificationTitle = assets.title
-                    )
                 } else {
-                    val url = assets.audioUrl
+                    url = assets.audioUrl
+                    fileName = assets.audioFileName
+                    mime = assets.audioMime
                     if (url.isNullOrBlank()) {
                         Toast.makeText(this@PlayerActivity, R.string.download_no_audio, Toast.LENGTH_SHORT).show()
                         return@launch
                     }
-                    MediaDownloader.enqueue(
+                }
+
+                Toast.makeText(this@PlayerActivity, R.string.download_started, Toast.LENGTH_SHORT).show()
+                try {
+                    MediaDownloader.download(
                         context = this@PlayerActivity,
                         url = url,
-                        fileName = assets.audioFileName,
-                        mimeType = assets.audioMime,
-                        notificationTitle = "${assets.title} (MP3)"
+                        fileName = fileName,
+                        mimeType = mime
+                    )
+                } catch (first: Exception) {
+                    // Stale/proxy URL — force a fresh resolve and retry once
+                    downloadAssets = null
+                    assets = runCatching { repository.resolveDownloadAssets(videoUrl) }.getOrNull()
+                        ?: throw first
+                    downloadAssets = assets
+                    val retryUrl = if (video) assets.videoUrl else assets.audioUrl
+                    val retryName = if (video) assets.videoFileName else assets.audioFileName
+                    val retryMime = if (video) assets.videoMime else assets.audioMime
+                    if (retryUrl.isNullOrBlank() || retryUrl == url) throw first
+                    MediaDownloader.download(
+                        context = this@PlayerActivity,
+                        url = retryUrl,
+                        fileName = retryName,
+                        mimeType = retryMime
                     )
                 }
-                Toast.makeText(this@PlayerActivity, R.string.download_started, Toast.LENGTH_LONG).show()
+                Toast.makeText(this@PlayerActivity, R.string.download_complete, Toast.LENGTH_LONG).show()
             } catch (e: Exception) {
                 Toast.makeText(
                     this@PlayerActivity,
-                    e.message ?: getString(R.string.download_failed),
+                    e.message?.take(120) ?: getString(R.string.download_failed),
                     Toast.LENGTH_LONG
                 ).show()
+            } finally {
+                binding.downloadVideoButton.isEnabled = true
+                binding.downloadMp3Button.isEnabled = true
             }
         }
     }
