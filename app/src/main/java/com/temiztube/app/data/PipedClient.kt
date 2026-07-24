@@ -20,13 +20,19 @@ object PipedClient {
 
     private val instances = listOf(
         "https://api.piped.private.coffee",
+        "https://pipedapi.owo.si",
+        "https://pipedapi.drgns.space",
+        "https://piped-api.codespace.cz",
         "https://pipedapi.kavin.rocks",
+        "https://pipedapi-libre.kavin.rocks",
         "https://pipedapi.reallyaweso.me",
         "https://pipedapi.ducks.party",
         "https://pipedapi.adminforge.de",
-        "https://pipedapi.colinslegacy.com",
         "https://pipedapi.r4fo.com",
-        "https://pipedapi.darkness.services"
+        "https://pipedapi.darkness.services",
+        "https://pipedapi.colinslegacy.com",
+        "https://pipedapi.leptons.xyz",
+        "https://pipedapi.orangenet.cc"
     )
 
     private val playClient = OkHttpClient.Builder()
@@ -92,7 +98,7 @@ object PipedClient {
     private fun fetchJson(client: OkHttpClient, base: String, videoId: String): JSONObject {
         val request = Request.Builder()
             .url("$base/streams/$videoId")
-            .header("User-Agent", "Murotube/1.7")
+            .header("User-Agent", "Murotube/1.9")
             .header("Accept", "application/json")
             .get()
             .build()

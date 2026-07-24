@@ -31,10 +31,36 @@ object MediaDownloader {
         .retryOnConnectionFailure(true)
         .build()
 
+    private val probeClient = OkHttpClient.Builder()
+        .connectTimeout(8, TimeUnit.SECONDS)
+        .readTimeout(8, TimeUnit.SECONDS)
+        .callTimeout(10, TimeUnit.SECONDS)
+        .followRedirects(true)
+        .followSslRedirects(true)
+        .retryOnConnectionFailure(true)
+        .build()
+
     data class Result(
         val localFile: File,
         val publicUri: Uri?
     )
+
+    fun isReachable(url: String): Boolean {
+        if (url.isBlank()) return false
+        return runCatching {
+            val request = Request.Builder()
+                .url(url)
+                .header("User-Agent", USER_AGENT)
+                .header("Referer", "https://www.youtube.com/")
+                .header("Origin", "https://www.youtube.com")
+                .header("Range", "bytes=0-2047")
+                .get()
+                .build()
+            probeClient.newCall(request).execute().use { response ->
+                response.isSuccessful || response.code == 206
+            }
+        }.getOrDefault(false)
+    }
 
     suspend fun download(
         context: Context,
@@ -43,17 +69,7 @@ object MediaDownloader {
         mimeType: String,
         onProgress: ((downloaded: Long, total: Long) -> Unit)? = null
     ): Result = withContext(Dispatchers.IO) {
-        val candidates = linkedSetOf(url)
-        var lastError: Exception? = null
-
-        for (candidate in candidates) {
-            try {
-                return@withContext downloadOnce(context, candidate, fileName, mimeType, onProgress)
-            } catch (e: Exception) {
-                lastError = e
-            }
-        }
-        throw lastError ?: IllegalStateException("İndirme başarısız")
+        downloadOnce(context, url, fileName, mimeType, onProgress)
     }
 
     private fun downloadOnce(

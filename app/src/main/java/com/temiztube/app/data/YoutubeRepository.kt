@@ -51,18 +51,24 @@ class YoutubeRepository {
             }
             val pipedJob = async {
                 runCatching {
-                    withTimeout(12_000) { PipedClient.resolveDownloadAssets(videoId) }
+                    withTimeout(15_000) { PipedClient.resolveDownloadAssets(videoId) }
                 }.getOrNull()
             }
 
             val newPipe = newPipeJob.await()
             if (newPipe != null && (newPipe.hasVideo() || newPipe.hasAudio())) {
-                return@coroutineScope newPipe
+                val okVideo = newPipe.videoUrl.isNullOrBlank() || MediaDownloader.isReachable(newPipe.videoUrl!!)
+                val okAudio = newPipe.audioUrl.isNullOrBlank() || MediaDownloader.isReachable(newPipe.audioUrl!!)
+                if (okVideo || okAudio) return@coroutineScope newPipe
             }
 
             val piped = pipedJob.await()
             if (piped != null && (piped.hasVideo() || piped.hasAudio())) {
                 return@coroutineScope piped
+            }
+
+            if (newPipe != null && (newPipe.hasVideo() || newPipe.hasAudio())) {
+                return@coroutineScope newPipe
             }
 
             throw IllegalStateException("İndirme bağlantısı alınamadı")

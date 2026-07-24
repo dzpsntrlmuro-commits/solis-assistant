@@ -39,6 +39,7 @@ import androidx.media3.ui.PlayerView
 import com.temiztube.app.R
 import com.temiztube.app.data.AdBlockFilter
 import com.temiztube.app.data.DownloadRepository
+import com.temiztube.app.data.MediaUrlCapture
 import com.temiztube.app.data.YoutubeRepository
 import com.temiztube.app.databinding.ActivityPlayerBinding
 import com.temiztube.app.model.DownloadAssets
@@ -452,9 +453,34 @@ class PlayerActivity : AppCompatActivity() {
         downloadJob?.cancel()
         binding.downloadVideoButton.isEnabled = false
         binding.downloadMp3Button.isEnabled = false
+        Toast.makeText(this, R.string.download_preparing, Toast.LENGTH_SHORT).show()
 
         downloadJob = lifecycleScope.launch {
             try {
+                var captureV = capturedVideoUrl.get()
+                var captureA = capturedAudioUrl.get()
+                val needCapture = if (video) captureV.isNullOrBlank() else captureA.isNullOrBlank()
+                if (needCapture && videoId.isNotBlank()) {
+                    val stolen = runCatching {
+                        MediaUrlCapture.capture(
+                            context = this@PlayerActivity,
+                            videoId = videoId,
+                            titleHint = binding.playerTitle.text?.toString().orEmpty()
+                        )
+                    }.getOrNull()
+                    if (stolen != null) {
+                        stolen.videoUrl?.let {
+                            captureV = it
+                            capturedVideoUrl.set(it)
+                        }
+                        stolen.audioUrl?.let {
+                            captureA = it
+                            capturedAudioUrl.set(it)
+                        }
+                        if (downloadAssets == null) downloadAssets = stolen
+                    }
+                }
+
                 downloadRepository.enqueue(
                     videoUrl = videoUrl,
                     videoId = videoId,
@@ -462,8 +488,8 @@ class PlayerActivity : AppCompatActivity() {
                     wantVideo = video,
                     cachedAssets = downloadAssets,
                     cachedPlayable = currentPlayable,
-                    capturedVideoUrl = capturedVideoUrl.get(),
-                    capturedAudioUrl = capturedAudioUrl.get()
+                    capturedVideoUrl = captureV,
+                    capturedAudioUrl = captureA
                 )
                 Toast.makeText(this@PlayerActivity, R.string.download_queued, Toast.LENGTH_SHORT).show()
                 startActivity(Intent(this@PlayerActivity, DownloadsActivity::class.java))
@@ -481,24 +507,11 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun rememberMediaUrl(url: String) {
-        if (url.isBlank()) return
-        val lower = url.lowercase()
-        if (!lower.contains("googlevideo.com") && !lower.contains("videoplayback")) return
-        if (lower.contains("mime=audio") || lower.contains("audio%2f") || lower.contains("/audio")) {
-            capturedAudioUrl.set(url)
-            return
-        }
-        if (lower.contains("mime=video") || lower.contains("video%2f") ||
-            lower.contains("itag=18") || lower.contains("itag=22") ||
-            lower.contains("itag=59") || lower.contains("itag=78")
-        ) {
-            capturedVideoUrl.set(url)
-            return
-        }
-        // Prefer progressive muxed streams when itag unknown
-        if (lower.contains("videoplayback") && !lower.contains("mime=audio")) {
-            if (capturedVideoUrl.get().isNullOrBlank()) {
-                capturedVideoUrl.set(url)
+        MediaUrlCapture.classify(url)?.let { (isAudio, mediaUrl) ->
+            if (isAudio) {
+                capturedAudioUrl.set(mediaUrl)
+            } else {
+                capturedVideoUrl.set(mediaUrl)
             }
         }
     }

@@ -77,46 +77,42 @@ class DownloadRepository(context: Context) {
         try {
             val assets = resolveAssets(
                 videoUrl = videoUrl,
+                wantVideo = wantVideo,
                 cachedAssets = cachedAssets,
                 cachedPlayable = cachedPlayable,
                 capturedVideoUrl = capturedVideoUrl,
                 capturedAudioUrl = capturedAudioUrl
             )
 
-            val sourceUrl: String
+            val urlsToTry = linkedSetOf<String>()
             val fileName: String
             val mime: String
             if (wantVideo) {
-                sourceUrl = assets.videoUrl
-                    ?: throw IllegalStateException("Video dosyası bulunamadı")
+                assets.videoUrl?.takeIf { it.isNotBlank() }?.let { urlsToTry.add(it) }
+                capturedVideoUrl?.takeIf { it.isNotBlank() }?.let { urlsToTry.add(it) }
+                cachedPlayable?.videoUrl?.takeIf { it.isNotBlank() }?.let { urlsToTry.add(it) }
+                cachedAssets?.videoUrl?.takeIf { !it.isNullOrBlank() }?.let { urlsToTry.add(it) }
                 fileName = assets.videoFileName
                 mime = assets.videoMime
+                if (urlsToTry.isEmpty()) throw IllegalStateException("Video dosyası bulunamadı")
             } else {
-                sourceUrl = assets.audioUrl
-                    ?: throw IllegalStateException("Ses dosyası bulunamadı")
+                assets.audioUrl?.takeIf { it.isNotBlank() }?.let { urlsToTry.add(it) }
+                capturedAudioUrl?.takeIf { it.isNotBlank() }?.let { urlsToTry.add(it) }
+                cachedPlayable?.audioUrl?.takeIf { !it.isNullOrBlank() }?.let { urlsToTry.add(it) }
+                cachedAssets?.audioUrl?.takeIf { !it.isNullOrBlank() }?.let { urlsToTry.add(it) }
                 fileName = assets.audioFileName
                 mime = assets.audioMime
+                if (urlsToTry.isEmpty()) throw IllegalStateException("Ses dosyası bulunamadı")
             }
 
             store.update(itemId) {
                 it.copy(title = assets.title.ifBlank { it.title }, fileName = fileName)
             }
 
-            val urlsToTry = buildList {
-                add(sourceUrl)
-                if (wantVideo) {
-                    capturedVideoUrl?.takeIf { it.isNotBlank() }?.let { add(it) }
-                    cachedPlayable?.videoUrl?.takeIf { it.isNotBlank() }?.let { add(it) }
-                    cachedAssets?.videoUrl?.takeIf { !it.isNullOrBlank() }?.let { add(it) }
-                } else {
-                    capturedAudioUrl?.takeIf { it.isNotBlank() }?.let { add(it) }
-                    cachedPlayable?.audioUrl?.takeIf { !it.isNullOrBlank() }?.let { add(it) }
-                    cachedAssets?.audioUrl?.takeIf { !it.isNullOrBlank() }?.let { add(it) }
-                }
-            }.distinct()
+            val ordered = urlsToTry.sortedByDescending { MediaDownloader.isReachable(it) }
 
             var lastError: Exception? = null
-            for (url in urlsToTry) {
+            for (url in ordered) {
                 try {
                     val result = MediaDownloader.download(
                         context = appContext,
@@ -168,6 +164,7 @@ class DownloadRepository(context: Context) {
 
     private suspend fun resolveAssets(
         videoUrl: String,
+        wantVideo: Boolean,
         cachedAssets: DownloadAssets?,
         cachedPlayable: PlayableStream?,
         capturedVideoUrl: String?,
@@ -177,31 +174,43 @@ class DownloadRepository(context: Context) {
             ?: cachedPlayable?.title
             ?: "murotube"
 
-        if (!capturedVideoUrl.isNullOrBlank() || !capturedAudioUrl.isNullOrBlank()) {
-            val fromPlayable = cachedPlayable?.let { youtubeRepository.downloadAssetsFromPlayable(it) }
-            return DownloadAssets(
+        fun usable(assets: DownloadAssets?): Boolean {
+            if (assets == null) return false
+            return if (wantVideo) !assets.videoUrl.isNullOrBlank() else !assets.audioUrl.isNullOrBlank()
+        }
+
+        fun reachable(assets: DownloadAssets): Boolean {
+            val url = if (wantVideo) assets.videoUrl else assets.audioUrl
+            return !url.isNullOrBlank() && MediaDownloader.isReachable(url)
+        }
+
+        val fromCapture = if (!capturedVideoUrl.isNullOrBlank() || !capturedAudioUrl.isNullOrBlank()) {
+            DownloadAssets(
                 title = title,
-                videoUrl = capturedVideoUrl
-                    ?: fromPlayable?.videoUrl
-                    ?: cachedAssets?.videoUrl,
+                videoUrl = capturedVideoUrl ?: cachedAssets?.videoUrl,
                 videoFileName = MediaDownloader.sanitizeFileName(title, "mp4"),
                 videoMime = "video/mp4",
-                audioUrl = capturedAudioUrl
-                    ?: fromPlayable?.audioUrl
-                    ?: cachedAssets?.audioUrl,
+                audioUrl = capturedAudioUrl ?: cachedAssets?.audioUrl,
                 audioFileName = MediaDownloader.sanitizeFileName(title, "m4a"),
                 audioMime = "audio/mp4"
             )
-        }
+        } else null
 
-        cachedAssets?.takeIf { !it.videoUrl.isNullOrBlank() || !it.audioUrl.isNullOrBlank() }
+        val fromPlayable = cachedPlayable?.let { youtubeRepository.downloadAssetsFromPlayable(it) }
+
+        listOf(fromCapture, cachedAssets, fromPlayable)
+            .firstOrNull { usable(it) && reachable(it!!) }
             ?.let { return it }
 
-        cachedPlayable?.let { youtubeRepository.downloadAssetsFromPlayable(it) }
-            ?.takeIf { !it.videoUrl.isNullOrBlank() || !it.audioUrl.isNullOrBlank() }
-            ?.let { return it }
+        val resolved = runCatching { youtubeRepository.resolveDownloadAssets(videoUrl) }.getOrNull()
+        if (usable(resolved) && reachable(resolved!!)) return resolved
+        if (usable(resolved)) return resolved!!
 
-        return youtubeRepository.resolveDownloadAssets(videoUrl)
+        listOf(fromCapture, fromPlayable, cachedAssets, resolved)
+            .firstOrNull { usable(it) }
+            ?.let { return it!! }
+
+        throw IllegalStateException("İndirme bağlantısı alınamadı")
     }
 
     companion object {
